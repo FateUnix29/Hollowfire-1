@@ -1,0 +1,33 @@
+# Any directory or file starting with IGNORE_ anywhere in this repository
+IGNORE_*.*
+IGNORE_*/
+IGNORE_*/*
+
+# Log files
+*.log
+
+# VSCode configurations
+.vscode/*
+
+# Special files:
+
+# - Environment / Third party secrets
+*.env
+.env
+apis.json
+
+# - Generated files
+__pycache__
+__pycache__/*
+*__pycache__*
+*.pyc
+*.pyo
+*.pyclass
+
+# - Profiles
+profiles/*.json
+
+# any WIP features not suitable for release
+WIP_*.*
+WIP_*/
+WIP_*/*
