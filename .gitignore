@@ -14,7 +14,6 @@ IGNORE_*/*
 # - Environment / Third party secrets
 *.env
 .env
-apis.json
 
 # - Generated files
 __pycache__
@@ -24,8 +23,9 @@ __pycache__/*
 *.pyo
 *.pyclass
 
-# - Profiles
+# - Profiles, memories, and other Hollowfire private data files
 profiles/*.json
+memories/*
 
 # any WIP features not suitable for release
 WIP_*.*

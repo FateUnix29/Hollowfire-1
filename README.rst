@@ -48,7 +48,9 @@ and just simply isn't portable to begin with.
 
 Some other things I'd like to do...
 
-* ... Nothing here yet, I'm afraid!
+* Long-term Memory (LTS)
+* Default/Built-in tools
+* ...
 
 
 How do I set it up?

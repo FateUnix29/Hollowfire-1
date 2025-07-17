@@ -1,0 +1,5 @@
+{
+    "env_var_names_providers": {
+        "groq": "GK"
+    }
+}
