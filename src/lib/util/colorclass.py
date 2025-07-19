@@ -25,7 +25,8 @@ if os.name == 'nt':
 class FM:
     """Holds various colors and methods for formatting text."""
 
-    reset = '\x1b[0m\x1b[49m'
+    reset = '\x1b[0m\x1b[49m' # reset color and background
+    reset_only_color = '\x1b[39m' # reset only foreground color
 
     # Regular colors...
     red, blue, green, yellow, purple                                                     =   ('\x1b[31m', '\x1b[34m', '\x1b[32m', '\x1b[33m', '\x1b[35m')

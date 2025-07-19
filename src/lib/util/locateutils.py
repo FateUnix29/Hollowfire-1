@@ -13,16 +13,17 @@ import sys # Module stuff.
 
 # Functions
 
-def locate_startout(module, args, logger):
+def locate_startout(module, module_name: str, args, logger):
     """Locate the given conversation startout variable within the base files.
 
     Args:
         module: The module containing the files to search.
+        module_name (str): The name of the module, or another module.
         args: CLI arguments.
         logger (logging.Logger): The logger to use.
     """
     for base_file in module.__all__:
-        getfile = getattr(sys.modules[__name__], base_file)
+        getfile = getattr(sys.modules[module_name], base_file)
         getbase = getattr(getfile, args.startout, None)
 
         if getbase:
