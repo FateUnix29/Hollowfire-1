@@ -111,7 +111,7 @@ def main(args,
         [ver_str.startswith(ver) for ver in ["3.13"]]
     ):  # 3.13.x should be okay as python is generally compatible with any other version of the same major release.
         logger.warning(
-            "HollowFire was developed, ran, and tested with Python 3.13.3:final."
+            "HollowFire was developed and tested with Python 3.13.3:final."
             "There is no official support for your Python version. Proceed with caution, ESPECIALLY if on a lower version."
         )
 
