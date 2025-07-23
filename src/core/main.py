@@ -12,7 +12,7 @@ __version__ = "1.0.0.0-ALPHA"
 
 
 
-# Imports: Built-in
+# Imports: Built-in/Standard
 import os                     # Used for path manipulation, among other things.
 import sys                    # Provides important information about the operating system, interpreter, etc. Also handles path & exit.
 import argparse               # Used to parse command line arguments.
@@ -29,7 +29,7 @@ import logging                # Used for logging.
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 
-# Imports: Built-in/Standard
+# Imports: Local/source
 # pylint: disable=wildcard-import                  # Required for plug-and-play.
 # pylint: disable=unused-wildcard-import
 # pylint: disable=redefined-builtin
