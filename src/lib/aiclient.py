@@ -4,3 +4,4 @@ class Hollowfire:
     """The main AI client class."""
 
     def __init__(self, *args, **kwargs):
+        pass
