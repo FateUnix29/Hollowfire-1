@@ -17,6 +17,7 @@ import sys                     # Provides important information about the operat
 import json                    # Used to parse JSON files.
 import logging                 # Used for logging.
 from copy import deepcopy      # Used for deep copying objects.
+import traceback               # Used to get information about exceptions.
 
 from abc import abstractmethod # Used for abstract methods.
 
@@ -29,6 +30,7 @@ import pydantic # Used for data validation.
 # Imports: Local/source
 from src.lib.util.colorclass import print, FM  # pylint: disable=redefined-builtin
 from src.lib.firepanic import panic            # Error handling system.
+from src.lib.util.locateutils import *         # Utility functions for finding files, directories, things within lists, etc.
 
 
 class BaseAIProvider:
@@ -42,6 +44,10 @@ class BaseAIProvider:
                  system_replacements: dict[str, str],
                  reset_point: list[dict[str, str]],
                  memory_dir: str,
+                 startouts_module,
+                 main_module_name,
+                 cli_args,
+                 startout_configuration: int = 0
                  ):
         """Base AI provider class.
 
@@ -53,6 +59,10 @@ class BaseAIProvider:
             system_replacements (dict[str, str], optional): A map of strings in the startout to replace with other strings.
             reset_point (list[dict[str, str]], optional): The default conversation startout.
             memory_dir (str, optional): The directory to use for memory.
+            startouts_module: The module containing the conversation startouts.
+            main_module_name (str): The name of the main module.
+            cli_args (Namespace): The command line arguments.
+            startout_configuration (int, optional): Defines how the startout is provided to the AI. Defaults to 0.
         """
 
         self.logger = logger
@@ -62,6 +72,10 @@ class BaseAIProvider:
         self.system_replacements = system_replacements
         self.reset_point = reset_point # reset_point itself should never change.
         self.memory_dir = memory_dir
+        self.startouts_module = startouts_module
+        self.main_module_name = main_module_name
+        self.cli_args = cli_args
+        self.startout_configuration = startout_configuration
 
         # Now, instead of having multiple conversations, this class *itself* is a conversation.
         self.conversation = self.update_reset_point()
@@ -154,6 +168,7 @@ class BaseAIProvider:
                 except: # pylint: disable=bare-except
 
                     self.logger.error("DELETE request to memory did not have the proper parameters.")
+                    self.logger.debug(traceback.format_exc())
                     request.send_response(400)
                     request.send_header("Content-Type", "application/json")
                     request.end_headers()
@@ -182,6 +197,7 @@ class BaseAIProvider:
                 except: # pylint: disable=bare-except
 
                     self.logger.error("PATCH request to memory did not have the proper parameters.")
+                    self.logger.debug(traceback.format_exc())
                     request.send_response(400)
                     request.send_header("Content-Type", "application/json")
                     request.end_headers()
@@ -204,6 +220,8 @@ class BaseAIProvider:
                     json.dumps({"error": "Invalid request. How did you get this error?"}).encode("utf-8") + b"\n"
                 )
 
+        self.logger.debug("Memory updated.")
+
 
 
 
@@ -219,6 +237,7 @@ class BaseAIProvider:
 
         except: # pylint: disable=bare-except
             self.logger.error("Memory saving request did not have a path.")
+            self.logger.debug(traceback.format_exc())
             request.send_response(400)
             request.send_header("Content-Type", "application/json")
             request.end_headers()
@@ -235,6 +254,7 @@ class BaseAIProvider:
 
         except: # pylint: disable=bare-except
             self.logger.error("Failed to save memory to disk.")
+            self.logger.debug(traceback.format_exc())
             request.send_response(500)
             request.send_header("Content-Type", "application/json")
             request.end_headers()
@@ -243,6 +263,7 @@ class BaseAIProvider:
             )
             return
 
+        self.logger.info("Memory saved.")
         request.send_response(200)
         request.end_headers()
 
@@ -261,6 +282,7 @@ class BaseAIProvider:
 
         except: # pylint: disable=bare-except
             self.logger.error("Memory loading request did not have a path.")
+            self.logger.debug(traceback.format_exc())
             request.send_response(400)
             request.send_header("Content-Type", "application/json")
             request.end_headers()
@@ -301,6 +323,7 @@ class BaseAIProvider:
 
         except: # pylint: disable=bare-except
             self.logger.error("Failed to load memory from disk.")
+            self.logger.debug(traceback.format_exc())
             request.send_response(500)
             request.send_header("Content-Type", "application/json")
             request.end_headers()
@@ -309,6 +332,7 @@ class BaseAIProvider:
             )
             return
 
+        self.logger.info("Memory loaded from disk.")
         request.send_response(200)
         request.end_headers()
 
@@ -322,6 +346,116 @@ class BaseAIProvider:
         Args:
             request: The request."""
 
+        self.logger.info("Memory reset.")
         self.conversation = self.update_reset_point()
         request.send_response(200)
         request.end_headers()
+
+
+
+
+
+    def search_set_startout(self, request):
+        """Search for a specified startout, and then overwrite the start of the conversation with it.
+
+        Args:
+            request: The request.
+        """
+
+        try:
+            path_used = request.path.removeprefix("/search_set_startout/")
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Startout search didn't have a valid path.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Request was invalid."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        method = request.method
+
+        new_startout = locate_startout(
+            self.startouts_module,
+            self.main_module_name,
+            path_used,
+            self.logger,
+        )
+
+        if not new_startout:
+            self.logger.error(f"Failed to find startout \'{path_used}\'.")
+            request.send_response(404)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": f"Failed to find startout \'{path_used}\'."}).encode("utf-8") + b"\n"
+            )
+            return
+
+
+        self.reset_point = new_startout
+
+        if method == "POST":
+            fixed_startout = self.update_reset_point()
+
+            for i in range(len(fixed_startout)): # pylint: disable=consider-using-enumerate # why would you use enumerate
+                self.conversation[i] = fixed_startout[i] # Overwrite the start of the conversation with the new startout.
+
+        self.logger.info(f"Changed startout to \'{path_used}\'.")
+
+        request.send_response(200)
+        request.send_header("Content-Type", "application/json")
+        request.end_headers()
+        request.wfile.write(json.dumps(self.conversation).encode("utf-8") + b"\n")
+
+
+
+
+
+    def change_startout_configuration(self, request):
+        """Change how the startout is provided to the AI.
+
+        Args:
+            request: The request.
+        """
+
+        try:
+            path_used = request.path.removeprefix("/change_startout_configuration/")
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Startout search didn't have a valid path.")
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Request was invalid."}).encode("utf-8") + b"\n"
+            )
+            return
+
+
+        # POST.
+        # Doesn't need to be JSON; just try to convert it into an int.
+        try:
+            self.startout_configuration = int(path_used)
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Failed to change startout configuration.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Failed to change startout configuration. Was the configuration an integer?"}).encode("utf-8") + b"\n"
+            )
+            return
+
+
+        request.send_response(200)
+        request.send_header("Content-Type", "application/json")
+        request.end_headers()
+        request.wfile.write(json.dumps(self.conversation).encode("utf-8") + b"\n")
+
+        self.logger.info(f"Changed startout configuration to {self.startout_configuration}.")
