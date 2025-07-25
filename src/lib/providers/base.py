@@ -76,10 +76,10 @@ class BaseAIProvider:
         """Updates the reset point based on the current state of self.system_replacements.
         """
 
-        new_srep = deepcopy(self.system_replacements)
+        new_srep = deepcopy(self.reset_point)
 
-        for key, value in new_srep.items():
-            for message in self.reset_point:
+        for key, value in self.system_replacements.items():
+            for message in new_srep:
                 message["content"] = message["content"].replace(key, value)
 
         return new_srep
