@@ -74,6 +74,9 @@ class BaseAIProvider:
 
     def update_reset_point(self):
         """Updates the reset point based on the current state of self.system_replacements.
+
+        Returns:
+            list[dict[str, str]]: The updated reset point. This function does not act upon the original reset point.
         """
 
         new_srep = deepcopy(self.reset_point)
@@ -306,5 +309,19 @@ class BaseAIProvider:
             )
             return
 
+        request.send_response(200)
+        request.end_headers()
+
+
+
+
+
+    def reset(self, request):
+        """Reset the current memory.
+
+        Args:
+            request: The request."""
+
+        self.conversation = self.update_reset_point()
         request.send_response(200)
         request.end_headers()
