@@ -459,3 +459,25 @@ class BaseAIProvider:
         request.wfile.write(json.dumps(self.conversation).encode("utf-8") + b"\n")
 
         self.logger.info(f"Changed startout configuration to {self.startout_configuration}.")
+
+
+
+
+
+    @abstractmethod
+    def do_setup(self, *args, **kwargs): # pylint: disable=unused-argument # Abstract.
+        """Set up the AI provider."""
+
+
+    @abstractmethod
+    def completion(self, configuration: dict):
+        """Generate a completion from the AI.
+
+        Args:
+            configuration (dict): The configuration to pass to the AI chat.
+        """
+
+
+    @abstractmethod
+    def completion_request(self, request): # pylint: disable=unused-argument # Abstract.
+        """Request a completion from the AI with a web-request."""
