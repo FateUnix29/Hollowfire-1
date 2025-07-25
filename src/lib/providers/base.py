@@ -33,6 +33,11 @@ from src.lib.firepanic import panic            # Error handling system.
 from src.lib.util.locateutils import *         # Utility functions for finding files, directories, things within lists, etc.
 
 
+
+# Classes
+
+
+
 class BaseAIProvider:
     """Base AI provider class. Can be thought of as a more complicated conversation instance."""
 
@@ -470,7 +475,7 @@ class BaseAIProvider:
 
 
     @abstractmethod
-    def completion(self, configuration: dict):
+    def completion(self, model: str, configuration: dict):
         """Generate a completion from the AI.
 
         Args:
@@ -480,4 +485,8 @@ class BaseAIProvider:
 
     @abstractmethod
     def completion_request(self, request): # pylint: disable=unused-argument # Abstract.
-        """Request a completion from the AI with a web-request."""
+        """Request a completion from the AI with a web-request.
+
+        Args:
+            request: The request.
+        """
