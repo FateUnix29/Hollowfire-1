@@ -30,23 +30,26 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 
 # Imports: Local/source
-# pylint: disable=wildcard-import                  # Required for plug-and-play.
+# pylint: disable=wildcard-import                             # Required for plug-and-play.
 # pylint: disable=unused-wildcard-import
 # pylint: disable=redefined-builtin
-from configuration import startouts                # Message startout addressing.
-from configuration.startouts import *              # Message startouts.
+from configuration import startouts                           # Message startout addressing.
+from configuration.startouts import *                         # Message startouts.
 
-from src.lib.util.colorclass import *              # Color class for terminal colors.
-from src.lib.util.locateutils import *             # Utility functions for finding files, directories, things within lists, etc.
+import tools
+from tools import *                                           # Tools :thumbsup:
+
+from src.lib.util.colorclass import *                         # Color class for terminal colors.
+from src.lib.util.locateutils import *                        # Utility functions for finding files, directories, things within lists, etc.
 # pylint: enable=redefined-builtin
 
-from src.lib.util.logsystem import setup_logging   # Logging system, specifically the initialization.
-from src.lib.util.logsystem import clean_directory # Logging system, specifically the cleaning of the log dir.
+from src.lib.util.logsystem import setup_logging              # Logging system, specifically the initialization.
+from src.lib.util.logsystem import clean_directory            # Logging system, specifically the cleaning of the log dir.
 
-from src.lib.providers.base import BaseAIProvider  # Base AI provider class.
-from src.lib.aiclient import Hollowfire            # AI client class.
+from src.lib.providers.ollamaprovider import OllamaAIProvider # Ollama AI provider class.
+from src.lib.aiclient import Hollowfire                       # AI client class.
 
-from src.lib.firepanic import panic                # Error handling system.
+from src.lib.firepanic import panic                           # Error handling system.
 
 
 
@@ -57,6 +60,7 @@ LOGDIR = os.path.join(ROOTDIR, "logs")
 CONFIG = os.path.join(ROOTDIR, "configuration")
 MEMORIES = os.path.join(ROOTDIR, "memories")
 PROFILES = os.path.join(ROOTDIR, "profiles")
+TOOLS = os.path.join(ROOTDIR, "tools")
 APIS = os.path.join(ROOTDIR, "apis.json")
 
 # Globals
@@ -93,11 +97,11 @@ def main(args,
     """
 
     logger.info("Reached entry point. Hello!")
-    logger.debug(f"HollowFire. Version: {__version__} | os.name: {os.name}")
+    logger.debug(f"Hollowfire. Version: {__version__} | os.name: {os.name}")
 
     if os.name != "posix":
         logger.warning(
-            "HollowFire has no support for your operating system. If something (particularly filesystem I/O) breaks, "
+            "Hollowfire has no support for your operating system. If something (particularly filesystem I/O) breaks, "
             "try virtualizing Linux/POSIX-compatible systems before reporting a bug."
         )
 
@@ -108,10 +112,10 @@ def main(args,
     logger.debug(f'Detected Python version: "{ver_str}"...')
 
     if not any(
-        [ver_str.startswith(ver) for ver in ["3.13"]]
+        ver_str.startswith(ver) for ver in ["3.13"]
     ):  # 3.13.x should be okay as python is generally compatible with any other version of the same major release.
         logger.warning(
-            "HollowFire was developed and tested with Python 3.13.3:final."
+            "Hollowfire was developed and tested with Python 3.13.5t:final."
             "There is no official support for your Python version. Proceed with caution, ESPECIALLY if on a lower version."
         )
 
@@ -123,11 +127,27 @@ def main(args,
 
     logger.debug(f"Searching for our startout... {startouts.__all__=}")
 
-    conversation_startout = locate_startout(startouts, __name__, args, logger)
+    conversation_startout = locate_attribute(startouts, __name__, args.startout)
 
     if not conversation_startout:
         logger.error("Failed to find conversation startout. Aborting.")
         sys.exit(1)
+
+    provider = OllamaAIProvider(
+        logger=logger,
+        logger_exit=logger_close,
+        stream_handler=log_console,
+        root_dir=ROOTDIR,
+        system_replacements=args.startout_replacements,
+        reset_point=conversation_startout,
+        memory_dir=MEMORIES,
+        profile_dir=PROFILES,
+        startouts_module=startouts,
+        tools_module=tools,
+        main_module_name=__name__,
+        cli_args=args,
+        startout_configuration=args.startout_config
+    )
 
     try:
         match args.service:
@@ -136,7 +156,9 @@ def main(args,
                 logger.info("Initializing ??? API.")
 
                 ai_client = Hollowfire(
-                    provider=BaseAIProvider()
+                    conversations=[
+                        provider
+                    ],
                     # TODO: this is just a mock-up anyway.
                 )
 
@@ -210,6 +232,12 @@ if __name__ == "__main__":
                         "2x verbosity, and it will print which file it found.",
                         default="ms_start_main") # ms_start_main is in main_s.py
 
+    ai_ops.add_argument("-sR", "--startout-replacements", type=str, help="A map of strings to other strings to replace in the startout.",
+                        default="{\"{name}\": \"Hollowfire\"}")
+
+    ai_ops.add_argument("-sC", "--startout-config", type=int, help="The configuration to use for the startout.",
+                        default=0)
+
     args = parser.parse_args()
 
     # Args further handling
@@ -222,6 +250,14 @@ if __name__ == "__main__":
             log_console.setLevel(logging.DEBUG)
         case 3:
             log_console.setLevel(logging.NOTSET)
+
+    try:
+        args.startout_replacements = json.loads(args.startout_replacements)
+
+    except: # pylint: disable=bare-except
+        print(f"{FM.error} \'{args.startout_replacements}\' is not a valid JSON string. Aborting.")
+        sys.exit(1)
+
 
     main(
         args,

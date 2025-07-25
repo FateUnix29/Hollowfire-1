@@ -13,7 +13,6 @@
 
 # Imports: Built-in/Standard
 import os                      # Used for path manipulation, among other things.
-import sys                     # Provides important information about the operating system, interpreter, etc. Also handles path & exit.
 import json                    # Used to parse JSON files.
 import logging                 # Used for logging.
 from copy import deepcopy      # Used for deep copying objects.
@@ -24,13 +23,11 @@ from abc import abstractmethod # Used for abstract methods.
 from typing import Literal    # Used for type hints.
 
 # Imports: Third-party
-import pydantic # Used for data validation.
+#import pydantic # Used for data validation.
 
 
 # Imports: Local/source
-from src.lib.util.colorclass import print, FM  # pylint: disable=redefined-builtin
-from src.lib.firepanic import panic            # Error handling system.
-from src.lib.util.locateutils import *         # Utility functions for finding files, directories, things within lists, etc.
+from src.lib.util.locateutils import locate_attribute # Utility functions for finding files, directories, things within lists, etc.
 
 
 
@@ -49,7 +46,9 @@ class BaseAIProvider:
                  system_replacements: dict[str, str],
                  reset_point: list[dict[str, str]],
                  memory_dir: str,
+                 profile_dir: str,
                  startouts_module,
+                 tools_module,
                  main_module_name,
                  cli_args,
                  startout_configuration: int = 0
@@ -64,7 +63,9 @@ class BaseAIProvider:
             system_replacements (dict[str, str], optional): A map of strings in the startout to replace with other strings.
             reset_point (list[dict[str, str]], optional): The default conversation startout.
             memory_dir (str, optional): The directory to use for memory.
+            profile_dir (str, optional): The directory to use for profiles.
             startouts_module: The module containing the conversation startouts.
+            tools_module: The module containing the tools.
             main_module_name (str): The name of the main module.
             cli_args (Namespace): The command line arguments.
             startout_configuration (int, optional): Defines how the startout is provided to the AI. Defaults to 0.
@@ -77,7 +78,9 @@ class BaseAIProvider:
         self.system_replacements = system_replacements
         self.reset_point = reset_point # reset_point itself should never change.
         self.memory_dir = memory_dir
+        self.profile_dir = profile_dir
         self.startouts_module = startouts_module
+        self.tools_module = tools_module
         self.main_module_name = main_module_name
         self.cli_args = cli_args
         self.startout_configuration = startout_configuration
@@ -383,11 +386,14 @@ class BaseAIProvider:
 
         method = request.method
 
-        new_startout = locate_startout(
+        new_startout, base_file = locate_attribute(
             self.startouts_module,
             self.main_module_name,
-            path_used,
-            self.logger,
+            path_used
+        )
+
+        self.logger.debug(
+            f"Found conversation startout '{path_used}' in configuration/startouts/{base_file}.py."
         )
 
         if not new_startout:

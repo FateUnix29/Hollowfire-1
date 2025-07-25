@@ -3,7 +3,7 @@
 # Author: Kalinite
 # Year: 2025
 # Description:
-"""Contains the base AI provider class."""
+"""Contains the Ollama AI provider class."""
 
 # pylint: disable=wrong-import-position
 # pylint: disable=pointless-statement
@@ -26,7 +26,8 @@ import ollama   # Used to access the Ollama API.
 
 # Imports: Local/source
 
-from src.lib.providers.base import BaseAIProvider # Base AI provider class.
+from src.lib.util.locateutils import locate_attribute # Utility functions for finding files, directories, things within lists, etc.
+from src.lib.providers.base import BaseAIProvider     # Base AI provider class.
 
 
 
@@ -116,10 +117,13 @@ class OllamaAIProvider(BaseAIProvider):
             )
             return
 
-
         do_streaming = data.get("stream", False)
         tools = data.pop("tools", []) # Tools that are currently available to the AI.
-        result = ""
+        # TODO. Here's how this is going to work.
+        # We're going to add a thing into the tools __init__.py that basically acts as exporting.
+        # The files will declare a list or tuple with their tool functions, __init__.py will combine them,
+        # and then we discard any not within the tools we just .pop()'d.
+        result = []
         _count = 1
 
         self.logger.info("Generating response...")
@@ -136,7 +140,7 @@ class OllamaAIProvider(BaseAIProvider):
                     _count += 1
                     continue
 
-                used_tools = []
+                #used_tools = []
 
                 for chunk in result:
 
@@ -145,11 +149,8 @@ class OllamaAIProvider(BaseAIProvider):
                     chunk_content = getattr(chunk_message, "content", None)
                     chunk_tools = getattr(chunk_message, "tool_calls", None)
 
-                    if chunk_content:
-                        result += chunk_content
-
-                    if chunk_tools:
-                        used_tools += chunk_tools
+                    #if chunk_tools:
+                    #    used_tools += chunk_tools
 
                     if do_streaming:
 
@@ -165,6 +166,32 @@ class OllamaAIProvider(BaseAIProvider):
                             "tool_calls": chunk_tools
                         }
 
+                        tool_responses = {}
+
+                        if chunk_tools:
+                            for tool in chunk_tools:
+                                self.logger.info(f"Tool used: {tool.name}")
+
+                                # Find the tool in the modules.
+                                tool_module = locate_attribute(
+                                    self.tools_module,
+                                    self.main_module_name,
+                                    tool.name
+                                )
+
+                                # MAYBE works. TODO test
+
+                                # pylint: disable=no-member # false positive
+                                # pylint: disable=not-callable
+                                tool_responses[tool.name] = f"{tool_module.name} returned:\n{tool_module()}"
+                                # pylint: enable=not-callable
+                                # pylint: enable=no-member
+                                # better way to do this???
+
+                        if tool_responses:
+                            send_json["tool_responses"] = tool_responses
+
+                        result.append(send_json)
                         encoded_send_json = json.dumps(send_json).encode("utf-8")
 
                         request.wfile.write(
@@ -184,12 +211,13 @@ class OllamaAIProvider(BaseAIProvider):
                     request.send_header("Content-Type", "application/json")
                     request.end_headers()
                     request.wfile.write(json.dumps(result).encode("utf-8") + b"\n")
+                    # oh this was already configured for not being a string
 
                 return
 
             except: # pylint: disable=bare-except
-                # better hope you have error handling if you're trying to stream it :)
 
+                # better hope you have error handling if you're trying to stream it :)
                 _count += 1
 
         # We're only going to break out of the loop in case of an error scenario. Send relevant headers and information.
