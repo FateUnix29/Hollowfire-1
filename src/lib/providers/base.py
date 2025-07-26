@@ -105,6 +105,7 @@ class BaseAIProvider:
 
         for key, value in self.system_replacements.items():
             for message in new_srep:
+                #print(message)
                 message["content"] = message["content"].replace(key, value)
 
         return new_srep

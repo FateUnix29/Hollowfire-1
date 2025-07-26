@@ -131,11 +131,14 @@ def main(args,
 
     logger.debug(f"Searching for our startout... {startouts.__all__=}")
 
-    conversation_startout = locate_attribute(startouts, __name__, args.startout)
+    conversation_startout, base_file = locate_attribute(startouts, __name__, args.startout)
 
-    if not conversation_startout:
+    if not conversation_startout or not base_file:
         logger.error("Failed to find conversation startout. Aborting.")
         sys.exit(1)
+
+    else:
+        logger.debug(f"Found startout \'{args.startout}\' from {base_file}")
 
     #provider = OllamaAIProvider(
     #    logger=logger,
@@ -199,7 +202,7 @@ def main(args,
         )
 
     ai_client = Hollowfire(
-        conversation_class=provider,
+        conversation_class=OllamaAIProvider,
         logger=logger,
         logger_exit=logger_close,
         stream_handler=log_console,
@@ -247,7 +250,7 @@ if __name__ == "__main__":
 
     logger, log_file, log_console, logger_close = setup_logging(logpath)
 
-    logger.info("Starting HollowFire... [Basic initialization...]")
+    logger.info("Starting Hollowfire... [Basic initialization...]")
 
     parser = argparse.ArgumentParser(
         description="Hollowfire - The spiritual successor to Rubicon, and a provider for AI inference on the local machine."
