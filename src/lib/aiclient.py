@@ -7,12 +7,16 @@
 
 
 # Imports: Built-in/Standard
-import os
+import json
 
 
 # Imports: Local/source
 from src.lib.providers.base import BaseAIProvider
-from src.lib.server import HollowCoreCustomHTTP
+from src.lib.server import HollowCoreCustomHTTP, NoSuchConversation
+
+
+# Imports: Third-party
+import traceback
 
 
 
@@ -77,7 +81,8 @@ class Hollowfire:
                 tools_module,
                 main_module_name,
                 cli_args,
-                startout_configuration
+                "default",
+                startout_configuration,
             )
         }
         self.logger = logger
@@ -106,4 +111,67 @@ class Hollowfire:
                 logger_exit,
                 cli_args,
                 root_dir
+            )
+
+        self.hollowserver.request_callback('POST', '/completion', lambda req: self.call_on_behalf(req, "print"), True)
+
+
+
+
+
+    def call_on_behalf(self, request, fn: str):
+        """Call the conversation functions on behalf of the callback.
+
+        Args:
+            request: The request.
+        """
+
+        try:
+            split = request.path.split("/")
+
+            while "" in split:
+                split.remove("")
+
+            if len(split) < 2:
+                request.send_response(400)
+                request.send_header("Content-Type", "application/json")
+                request.end_headers()
+                request.wfile.write(
+                    json.dumps({"error": "Incomplete path for this request."}).encode("utf-8") + b"\n"
+                )
+
+            conv = split[1]
+
+            split.remove(split[1])
+            path_without = "/" + "/".join(split)
+
+            request.path = path_without
+
+
+            conv = self.conversations.get(conv)
+
+            if not conv:
+                raise NoSuchConversation
+
+
+            getattr(conv, fn)(request)
+
+
+        except NoSuchConversation:
+            request.send_response(404)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Conversation not found."}).encode("utf-8") + b"\n"
+            )
+
+
+        except AttributeError:
+            self.logger.error("Invalid request callback registered.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(500)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Invalid request callback registered."}).encode("utf-8") + b"\n"
             )

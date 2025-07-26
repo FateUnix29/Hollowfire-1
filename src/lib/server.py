@@ -32,6 +32,12 @@ from src.lib.firepanic import panic           # Error handling system.
 
 
 
+class NoSuchConversation(Exception):
+    """Thrown when a conversation doesn't exist."""
+    pass
+
+
+
 class HollowCoreCustomHTTP(http.server.HTTPServer):
     """See __init__ docstring."""
 
@@ -134,6 +140,9 @@ class HollowCoreCustomHTTP(http.server.HTTPServer):
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Path/endpoint not found (or wrong method)"}).encode("utf-8") + b"\n")
 
+            except NoSuchConversation:
+                pass
+
             except: # pylint: disable=bare-except
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -175,6 +184,9 @@ class HollowCoreCustomHTTP(http.server.HTTPServer):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Path/endpoint not found (or wrong method)"}).encode("utf-8") + b"\n")
+
+            except NoSuchConversation:
+                pass
 
             except: # pylint: disable=bare-except
                 self.send_response(500)

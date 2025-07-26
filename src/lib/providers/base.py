@@ -51,7 +51,8 @@ class BaseAIProvider:
                  tools_module,
                  main_module_name,
                  cli_args,
-                 startout_configuration: int = 0
+                 conversation_id: str,
+                 startout_configuration: int = 0,
                  ):
         """Base AI provider class.
 
@@ -68,6 +69,7 @@ class BaseAIProvider:
             tools_module: The module containing the tools.
             main_module_name (str): The name of the main module.
             cli_args (Namespace): The command line arguments.
+            conversation_id (str): The ID of the conversation.
             startout_configuration (int, optional): Defines how the startout is provided to the AI. Defaults to 0.
         """
 
@@ -83,6 +85,7 @@ class BaseAIProvider:
         self.tools_module = tools_module
         self.main_module_name = main_module_name
         self.cli_args = cli_args
+        self.conversation_id = conversation_id
         self.startout_configuration = startout_configuration
 
         # Now, instead of having multiple conversations, this class *itself* is a conversation.
