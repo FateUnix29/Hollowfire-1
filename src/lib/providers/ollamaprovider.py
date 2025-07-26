@@ -26,7 +26,7 @@ import ollama   # Used to access the Ollama API.
 
 # Imports: Local/source
 
-from src.lib.util.locateutils import locate_attribute # Utility functions for finding files, directories, things within lists, etc.
+#from src.lib.util.locateutils import locate_attribute # Utility functions for finding files, directories, things within lists, etc.
 from src.lib.providers.base import BaseAIProvider     # Base AI provider class.
 
 
@@ -123,6 +123,16 @@ class OllamaAIProvider(BaseAIProvider):
         # We're going to add a thing into the tools __init__.py that basically acts as exporting.
         # The files will declare a list or tuple with their tool functions, __init__.py will combine them,
         # and then we discard any not within the tools we just .pop()'d.
+
+        tools_provided = []
+        for tool_export in self.tools_module.exports:
+            # tool_export: list[function/callable]
+            for tool in tool_export:
+                if tool in tools:
+                    tools_provided.append({tool.__name__: tool})
+
+        data["tools"] = [v.keys()[0] for v in tools_provided]
+
         result = []
         _count = 1
 
@@ -173,17 +183,17 @@ class OllamaAIProvider(BaseAIProvider):
                                 self.logger.info(f"Tool used: {tool.name}")
 
                                 # Find the tool in the modules.
-                                tool_module = locate_attribute(
-                                    self.tools_module,
-                                    self.main_module_name,
-                                    tool.name
-                                )
+                                #tool_module = locate_attribute(
+                                #    self.tools_module,
+                                #    self.main_module_name,
+                                #    tool.name
+                                #)
 
                                 # MAYBE works. TODO test
 
                                 # pylint: disable=no-member # false positive
                                 # pylint: disable=not-callable
-                                tool_responses[tool.name] = f"{tool_module.name} returned:\n{tool_module()}"
+                                tool_responses[tool.name] = f"{tool.name} returned:\n{tool.function(**tool.arguments)}"
                                 # pylint: enable=not-callable
                                 # pylint: enable=no-member
                                 # better way to do this???
