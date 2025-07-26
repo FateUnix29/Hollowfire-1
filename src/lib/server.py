@@ -12,7 +12,8 @@
 
 
 # Imports: Built-in/Standard
-import http                # Used for the HTTP server.
+#import http                # Used for the HTTP server.
+import http.server         # Used for the HTTP server.
 import logging             # Used for logging.
 import json                # Used to parse JSON files.
 
