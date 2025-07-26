@@ -117,7 +117,7 @@ class OllamaAIProvider(BaseAIProvider):
             )
             return
 
-        do_streaming = data.get("stream", False)
+        do_streaming = data.pop("stream", False)
         tools = data.pop("tools", []) # Tools that are currently available to the AI.
         # TODO. Here's how this is going to work.
         # We're going to add a thing into the tools __init__.py that basically acts as exporting.
@@ -133,6 +133,9 @@ class OllamaAIProvider(BaseAIProvider):
 
         data["tools"] = [v.keys()[0] for v in tools_provided]
 
+        # We will always internally stream the response, but it's up to the user if they want Hollowserver itself to stream it.
+        data["stream"] = True
+
         result = []
         _count = 1
 
@@ -143,16 +146,22 @@ class OllamaAIProvider(BaseAIProvider):
             self.logger.debug(f"Attempt {_count}.")
 
             try:
-                result: ollama.ChatResponse = self.completion("qwen3", data)
+                print("here")
+                completion: ollama.ChatResponse = self.completion("qwen3", data)
+                print("there")
 
-                if not result:
+                if not completion:
                     self.logger.error("Blank result.")
                     _count += 1
                     continue
 
+                print("everywhere")
+
                 #used_tools = []
 
-                for chunk in result:
+                for chunk in completion:
+
+                    print('nowhere', chunk)
 
                     chunk_message = chunk.message
 
@@ -161,6 +170,40 @@ class OllamaAIProvider(BaseAIProvider):
 
                     #if chunk_tools:
                     #    used_tools += chunk_tools
+
+                    print(do_streaming, chunk_content, chunk_tools)
+
+                    send_json = {
+                        "content": chunk_content,
+                        "tool_calls": chunk_tools
+                    }
+
+                    tool_responses = {}
+
+                    if chunk_tools:
+                        for tool in chunk_tools:
+                            self.logger.info(f"Tool used: {tool.name}")
+
+                            # Find the tool in the modules.
+                            #tool_module = locate_attribute(
+                            #    self.tools_module,
+                            #    self.main_module_name,
+                            #    tool.name
+                            #)
+
+                            # MAYBE works. TODO test
+
+                            # pylint: disable=no-member # false positive
+                            # pylint: disable=not-callable
+                            tool_responses[tool.name] = f"{tool.name} returned:\n{tool.function(**tool.arguments)}"
+                            # pylint: enable=not-callable
+                            # pylint: enable=no-member
+                            # better way to do this???
+
+                    if tool_responses:
+                        send_json["tool_responses"] = tool_responses
+
+                    result.append(send_json)
 
                     if do_streaming:
 
@@ -171,37 +214,8 @@ class OllamaAIProvider(BaseAIProvider):
                             request.send_header("Transfer-Encoding", "chunked")
                             request.end_headers()
 
-                        send_json = {
-                            "content": chunk_content,
-                            "tool_calls": chunk_tools
-                        }
 
-                        tool_responses = {}
-
-                        if chunk_tools:
-                            for tool in chunk_tools:
-                                self.logger.info(f"Tool used: {tool.name}")
-
-                                # Find the tool in the modules.
-                                #tool_module = locate_attribute(
-                                #    self.tools_module,
-                                #    self.main_module_name,
-                                #    tool.name
-                                #)
-
-                                # MAYBE works. TODO test
-
-                                # pylint: disable=no-member # false positive
-                                # pylint: disable=not-callable
-                                tool_responses[tool.name] = f"{tool.name} returned:\n{tool.function(**tool.arguments)}"
-                                # pylint: enable=not-callable
-                                # pylint: enable=no-member
-                                # better way to do this???
-
-                        if tool_responses:
-                            send_json["tool_responses"] = tool_responses
-
-                        result.append(send_json)
+                        print(f"DBG!: {send_json}, {result}")
                         encoded_send_json = json.dumps(send_json).encode("utf-8")
 
                         request.wfile.write(
@@ -225,7 +239,7 @@ class OllamaAIProvider(BaseAIProvider):
 
                 return
 
-            except: # pylint: disable=bare-except
+            except RuntimeError: # pylint: disable=bare-except
 
                 # better hope you have error handling if you're trying to stream it :)
                 _count += 1

@@ -133,7 +133,7 @@ class Hollowfire:
         self.hollowserver.request_callback('POST', '/search_set_startout', lambda req: self.call_on_behalf(req, "search_set_startout"), True)
 
         self.hollowserver.request_callback('GET', '/change_startout_configuration', lambda req: self.call_on_behalf(req, "change_startout_configuration"), True)
-        
+
         self.hollowserver.request_callback('GET', '/save-persona', lambda req: self.call_on_behalf(req, "save_persona"), True)
         self.hollowserver.request_callback('GET', '/load-persona', lambda req: self.call_on_behalf(req, "load_persona"), True)
 
