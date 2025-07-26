@@ -39,6 +39,9 @@ from configuration.startouts import *                         # Message startout
 import tools
 from tools import *                                           # Tools :thumbsup:
 
+import profiles
+from profiles import *                                        # Profiles.
+
 from src.lib.util.colorclass import *                         # Color class for terminal colors.
 from src.lib.util.locateutils import *                        # Utility functions for finding files, directories, things within lists, etc.
 # pylint: enable=redefined-builtin
@@ -133,21 +136,21 @@ def main(args,
         logger.error("Failed to find conversation startout. Aborting.")
         sys.exit(1)
 
-    provider = OllamaAIProvider(
-        logger=logger,
-        logger_exit=logger_close,
-        stream_handler=log_console,
-        root_dir=ROOTDIR,
-        system_replacements=args.startout_replacements,
-        reset_point=conversation_startout,
-        memory_dir=MEMORIES,
-        profile_dir=PROFILES,
-        startouts_module=startouts,
-        tools_module=tools,
-        main_module_name=__name__,
-        cli_args=args,
-        startout_configuration=args.startout_config
-    )
+    #provider = OllamaAIProvider(
+    #    logger=logger,
+    #    logger_exit=logger_close,
+    #    stream_handler=log_console,
+    #    root_dir=ROOTDIR,
+    #    system_replacements=args.startout_replacements,
+    #    reset_point=conversation_startout,
+    #    memory_dir=MEMORIES,
+    #    profile_dir=PROFILES,
+    #    startouts_module=startouts,
+    #    tools_module=tools,
+    #    main_module_name=__name__,
+    #    cli_args=args,
+    #    startout_configuration=args.startout_config
+    #)
 
     try:
         match args.service:
@@ -156,10 +159,21 @@ def main(args,
                 logger.info("Initializing ??? API.")
 
                 ai_client = Hollowfire(
-                    conversations=[
-                        provider
-                    ],
-                    # TODO: this is just a mock-up anyway.
+                    conversation_class=OllamaAIProvider,
+                    logger=logger,
+                    logger_exit=logger_close,
+                    stream_handler=log_console,
+                    root_dir=ROOTDIR,
+                    system_replacements=args.startout_replacements,
+                    reset_point=conversation_startout,
+                    memory_dir=MEMORIES,
+                    profile_dir=PROFILES,
+                    startouts_module=startouts,
+                    tools_module=tools,
+                    main_module_name=__name__,
+                    profiles_module=profiles,
+                    cli_args=args,
+                    startout_configuration=args.startout_config
                 )
 
     except: # pylint: disable=bare-except # Bare excepts are going to be used a lot in Hollowserver.

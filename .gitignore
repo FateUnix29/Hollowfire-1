@@ -8,6 +8,7 @@ IGNORE_*/*
 
 # VSCode configurations
 .vscode/*
+.vscode
 
 # Special files:
 
@@ -26,6 +27,7 @@ __pycache__/*
 # - Profiles, memories, and other Hollowfire private data files
 profiles/*.json
 memories/*
+memories
 
 # any WIP features not suitable for release
 WIP_*.*
