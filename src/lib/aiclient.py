@@ -113,7 +113,9 @@ class Hollowfire:
                 root_dir
             )
 
-        self.hollowserver.request_callback('POST', '/completion', lambda req: self.call_on_behalf(req, "print"), True)
+        self.hollowserver.request_callback('POST', '/completion', lambda req: self.call_on_behalf(req, "completion_request"), True)
+
+        self.hollowserver.request_callback('GET', '/memory', )
 
 
 
