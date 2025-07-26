@@ -54,6 +54,8 @@ from src.lib.aiclient import Hollowfire                       # AI client class.
 
 from src.lib.firepanic import panic                           # Error handling system.
 
+from src.lib.server import HollowCoreCustomHTTP               # The HTTP server.
+
 
 
 # Constants
@@ -85,7 +87,7 @@ def main(args,
          log_console: logging.StreamHandler,
          logger_close: callable,
          ai_client: Hollowfire,
-         conversation_startout
+         #conversation_startout
          ): # pylint: disable=redefined-outer-name
     """Primary entry point.
 
@@ -96,7 +98,6 @@ def main(args,
         log_console (logging.StreamHandler): The console handler for the logger. Used when cleaning up.
         logger_close (callable): The function to call to clean up the logger.
         ai_client (Hollowfire): An AI client to use.
-        conversation_startout: The starting messages to use for every new conversation.
     """
 
     logger.info("Reached entry point. Hello!")
@@ -152,14 +153,15 @@ def main(args,
     #    startout_configuration=args.startout_config
     #)
 
+
+    provider = None
+
     try:
         match args.service:
 
-            case _:
-                logger.info("Initializing ??? API.")
-
-                ai_client = Hollowfire(
-                    conversation_class=OllamaAIProvider,
+            case "ollama":
+                logger.info("Initializing Ollama provider.")
+                provider = OllamaAIProvider(
                     logger=logger,
                     logger_exit=logger_close,
                     stream_handler=log_console,
@@ -171,10 +173,15 @@ def main(args,
                     startouts_module=startouts,
                     tools_module=tools,
                     main_module_name=__name__,
-                    profiles_module=profiles,
                     cli_args=args,
                     startout_configuration=args.startout_config
                 )
+                provider.do_setup()
+
+            case _:
+                logger.error("Invalid API. Aborting.") # How do you even get here? Argparse...!
+                sys.exit(1)
+
 
     except: # pylint: disable=bare-except # Bare excepts are going to be used a lot in Hollowserver.
             # It's important that NOTHING crashes it unless absolutely necessary.
@@ -190,6 +197,36 @@ def main(args,
             error_type="API Initialization Error",
             dedicated_callable=logger_close
         )
+
+    ai_client = Hollowfire(
+        conversation_class=provider,
+        logger=logger,
+        logger_exit=logger_close,
+        stream_handler=log_console,
+        root_dir=ROOTDIR,
+        system_replacements=args.startout_replacements,
+        reset_point=conversation_startout,
+        memory_dir=MEMORIES,
+        profile_dir=PROFILES,
+        startouts_module=startouts,
+        tools_module=tools,
+        main_module_name=__name__,
+        profiles_module=profiles,
+        cli_args=args,
+        startout_configuration=args.startout_config,
+        hollowserver=HollowCoreCustomHTTP(
+            12779,
+            logger,
+            log_console,
+            logger_close,
+            args,
+            ROOTDIR
+        )
+    )
+
+    # Theoretically, AI client will handle the callbacks.
+
+    ai_client.hollowserver.run_server()
 
 
 
@@ -279,6 +316,6 @@ if __name__ == "__main__":
         log_file,
         log_console,
         logger_close,
-        Hollowfire(),
-        None
+        None,
+        #args.startout
     )
