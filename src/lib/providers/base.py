@@ -120,8 +120,8 @@ class BaseAIProvider:
                             # In this case, json_data probably isn't going to be used in a way that could be dangerous.
     def memory_update(self, # pylint: disable=dangerous-default-value
                       request,
-                      action: Literal["GET", "POST", "PUT", "DELETE", "PATCH"],
-                      json_data: dict = {}):
+                      #action: Literal["GET", "POST", "PUT", "DELETE", "PATCH"],
+                      ):#json_data: dict = {}):
         """Update the memory of the AI provider/conversation.
 
         Args:
@@ -138,8 +138,25 @@ class BaseAIProvider:
         except: # pylint: disable=bare-except
             self.logger.warning("Failed to obtain the path for a memory update; Could cause issues.")
 
+        json_data = None
 
-        match action:
+        try:
+            json_data = json.loads(request.rfile.read(int(request.headers["Content-Length"])).decode("utf-8"))
+
+        except ValueError:
+            # 411, content length required
+            request.send_response(411)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(json.dumps({"error": "Content length is required."}).encode("utf-8") + b"\n")
+
+            return
+
+        except: # pylint: disable=bare-except
+            pass
+
+
+        match request.method:
 
             case "GET": # Return the current conversation.
 
