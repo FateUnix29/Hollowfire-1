@@ -5,6 +5,9 @@
 # Description:
 """The main AI client class."""
 
+# pylint: disable=wrong-import-order
+
+
 
 # Imports: Built-in/Standard
 import json
@@ -115,8 +118,24 @@ class Hollowfire:
 
         self.hollowserver.request_callback('POST', '/completion', lambda req: self.call_on_behalf(req, "completion_request"), True)
 
-        self.hollowserver.request_callback('GET', '/memory', )
+        self.hollowserver.request_callback('GET', '/memory', lambda req: self.call_on_behalf(req, "memory_update"), True)
+        self.hollowserver.request_callback('POST', '/memory', lambda req: self.call_on_behalf(req, "memory_update"), True)
+        self.hollowserver.request_callback('DELETE', '/memory', lambda req: self.call_on_behalf(req, "memory_update"), True)
+        self.hollowserver.request_callback('PATCH', '/memory', lambda req: self.call_on_behalf(req, "memory_update"), True)
+        self.hollowserver.request_callback('PUT', '/memory', lambda req: self.call_on_behalf(req, "memory_update"), True)
 
+        self.hollowserver.request_callback('GET', '/save', lambda req: self.call_on_behalf(req, "save"), True)
+        self.hollowserver.request_callback('GET', '/load', lambda req: self.call_on_behalf(req, "load"), True)
+
+        self.hollowserver.request_callback('GET', '/reset', lambda req: self.call_on_behalf(req, "reset"), True)
+
+        self.hollowserver.request_callback('GET', '/search_set_startout', lambda req: self.call_on_behalf(req, "search_set_startout"), True)
+        self.hollowserver.request_callback('POST', '/search_set_startout', lambda req: self.call_on_behalf(req, "search_set_startout"), True)
+
+        self.hollowserver.request_callback('GET', '/change_startout_configuration', lambda req: self.call_on_behalf(req, "change_startout_configuration"), True)
+        
+        self.hollowserver.request_callback('GET', '/save-persona', lambda req: self.call_on_behalf(req, "save_persona"), True)
+        self.hollowserver.request_callback('GET', '/load-persona', lambda req: self.call_on_behalf(req, "load_persona"), True)
 
 
 
