@@ -500,7 +500,7 @@ class BaseAIProvider:
 
 
     @abstractmethod
-    def completion(self, model: str, configuration: dict):
+    def completion(self, model: str, configuration: dict): # pylint: disable=unused-argument # Abstract.
         """Generate a completion from the AI.
 
         Args:

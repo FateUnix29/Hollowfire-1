@@ -52,7 +52,7 @@ from src.lib.util.logsystem import clean_directory            # Logging system, 
 from src.lib.providers.ollamaprovider import OllamaAIProvider # Ollama AI provider class.
 from src.lib.aiclient import Hollowfire                       # AI client class.
 
-from src.lib.firepanic import panic                           # Error handling system.
+#from src.lib.firepanic import panic                           # Error handling system.
 
 from src.lib.server import HollowCoreCustomHTTP               # The HTTP server.
 
@@ -83,7 +83,7 @@ conversation_startout = None # Type annotation is so long I'm not going to bothe
 # Functions
 def main(args,
          logger: logging.Logger,
-         log_file: logging.FileHandler,
+         #log_file: logging.FileHandler,
          log_console: logging.StreamHandler,
          logger_close: callable,
          ai_client: Hollowfire,
@@ -94,14 +94,15 @@ def main(args,
     Args:
         args: The command line arguments.
         logger (logging.Logger): The logger to use.
-        log_file (logging.FileHandler): The file handler for the logger. Used when cleaning up.
         log_console (logging.StreamHandler): The console handler for the logger. Used when cleaning up.
         logger_close (callable): The function to call to clean up the logger.
         ai_client (Hollowfire): An AI client to use.
     """
 
+
     logger.info("Reached entry point. Hello!")
     logger.debug(f"Hollowfire. Version: {__version__} | os.name: {os.name}")
+
 
     if os.name != "posix":
         logger.warning(
@@ -109,19 +110,19 @@ def main(args,
             "try virtualizing Linux/POSIX-compatible systems before reporting a bug."
         )
 
+
     ver_info = sys.version_info
-    ver_str = (
-        f"{ver_info.major}.{ver_info.minor}.{ver_info.micro}:{ver_info.releaselevel}"
-    )
+    ver_str = f"{ver_info.major}.{ver_info.minor}.{ver_info.micro}:{ver_info.releaselevel}"
     logger.debug(f'Detected Python version: "{ver_str}"...')
 
-    if not any(
-        ver_str.startswith(ver) for ver in ["3.13"]
-    ):  # 3.13.x should be okay as python is generally compatible with any other version of the same major release.
+    # 3.13.x should be okay as python is generally compatible with any other version of the same major release.
+    if not any(ver_str.startswith(ver) for ver in ["3.13"]):
+
         logger.warning(
             "Hollowfire was developed and tested with Python 3.13.5t:final."
             "There is no official support for your Python version. Proceed with caution, ESPECIALLY if on a lower version."
         )
+
 
     logger.debug(f"ROOTDIR: {ROOTDIR}")
     logger.debug(f"CONFIG: {CONFIG}")
@@ -129,9 +130,11 @@ def main(args,
     logger.debug(f"PROFILES: {PROFILES}")
     logger.debug(f"APIS: {APIS}")
 
+
     logger.debug(f"Searching for our startout... {startouts.__all__=}")
 
     conversation_startout, base_file = locate_attribute(startouts, __name__, args.startout)
+
 
     if not conversation_startout or not base_file:
         logger.error("Failed to find conversation startout. Aborting.")
@@ -140,69 +143,17 @@ def main(args,
     else:
         logger.debug(f"Found startout \'{args.startout}\' from {base_file}")
 
-    #provider = OllamaAIProvider(
-    #    logger=logger,
-    #    logger_exit=logger_close,
-    #    stream_handler=log_console,
-    #    root_dir=ROOTDIR,
-    #    system_replacements=args.startout_replacements,
-    #    reset_point=conversation_startout,
-    #    memory_dir=MEMORIES,
-    #    profile_dir=PROFILES,
-    #    startouts_module=startouts,
-    #    tools_module=tools,
-    #    main_module_name=__name__,
-    #    cli_args=args,
-    #    startout_configuration=args.startout_config
-    #)
+
+    provider_mapping = {
+        "ollama": OllamaAIProvider
+    }
+
+    provider = provider_mapping.get(args.service)
 
 
-    provider = None
-
-    try:
-        match args.service:
-
-            case "ollama":
-                logger.info("Initializing Ollama provider.")
-                #provider = OllamaAIProvider(
-                #    logger=logger,
-                #    logger_exit=logger_close,
-                #    stream_handler=log_console,
-                #    root_dir=ROOTDIR,
-                #    system_replacements=args.startout_replacements,
-                #    reset_point=conversation_startout,
-                #    memory_dir=MEMORIES,
-                #    profile_dir=PROFILES,
-                #    startouts_module=startouts,
-                #    tools_module=tools,
-                #    main_module_name=__name__,
-                #    cli_args=args,
-                #    startout_configuration=args.startout_config
-                #)
-                #provider.do_setup()
-
-            case _:
-                logger.error("Invalid API. Aborting.") # How do you even get here? Argparse...!
-                sys.exit(1)
-
-
-    except: # pylint: disable=bare-except # Bare excepts are going to be used a lot in Hollowserver.
-            # It's important that NOTHING crashes it unless absolutely necessary.
-
-        #logger.error("Failed to initialize API. Aborting.")
-        #sys.exit(1)
-        panic(
-            "Failed to initialize API. Aborting.",
-            ROOTDIR,
-            logger,
-            1, # 1: User error / minor problems.
-            log_console,
-            error_type="API Initialization Error",
-            dedicated_callable=logger_close
-        )
 
     ai_client = Hollowfire(
-        conversation_class=OllamaAIProvider,
+        conversation_class=provider,
         logger=logger,
         logger_exit=logger_close,
         stream_handler=log_console,
@@ -227,8 +178,8 @@ def main(args,
         )
     )
 
-    # Theoretically, AI client will handle the callbacks.
 
+    # AI client will handle the callbacks.
     ai_client.hollowserver.run_server()
 
 
@@ -241,7 +192,7 @@ if __name__ == "__main__":
     DESIRED_LOG_COUNT = 10
 
     logpath = os.path.join(
-        LOGDIR, f"{datetime.now().strftime(r'LATEST_HollowFire_%Y-%m-%d_%H-%M-%S')}.log"
+        LOGDIR, f"{datetime.now().strftime(r'LATEST_Hollowfire_%Y-%m-%d_%H-%M-%S')}.log"
     )
 
     clean_directory(
@@ -316,7 +267,7 @@ if __name__ == "__main__":
     main(
         args,
         logger,
-        log_file,
+        #log_file,
         log_console,
         logger_close,
         None,

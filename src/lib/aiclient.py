@@ -16,6 +16,7 @@ import json
 # Imports: Local/source
 from src.lib.providers.base import BaseAIProvider
 from src.lib.server import HollowCoreCustomHTTP, NoSuchConversation
+from src.lib.providers.ollamaprovider import OllamaAIProvider
 
 
 # Imports: Third-party
@@ -68,6 +69,7 @@ class Hollowfire:
             profiles_module: The module containing the profiles.
             cli_args (Namespace): The command line arguments.
             startout_configuration (int, optional): The startout configuration to use.
+            hollowserver (HollowCoreCustomHTTP, optional): The Hollowcore server to use.
         """
 
         self.conversation_class = conversation_class
@@ -140,6 +142,9 @@ class Hollowfire:
 
         self.hollowserver.request_callback('GET', '/ensure-exist', self.ensure_conv_exists, True)
 
+        self.hollowserver.request_callback('GET', '/change-provider', self.change_provider, True)
+        self.hollowserver.request_callback('POST', '/setup-provider', self.setup_provider, True)
+
 
 
 
@@ -148,6 +153,7 @@ class Hollowfire:
 
         Args:
             request: The request.
+            fn (str): The function to call.
         """
 
         try:
@@ -200,6 +206,73 @@ class Hollowfire:
             request.wfile.write(
                 json.dumps({"error": "Invalid request callback registered."}).encode("utf-8") + b"\n"
             )
+
+
+
+
+
+    def call_on_behalf_noreq(self, path: str, fn: str, *args, lensplit: int=1, request=None, **kwargs):
+        """Call the conversation functions on behalf of the callback.
+
+        Args:
+            path (str): The path.
+            fn (str): The function to call.
+            lensplit (int, optional): The length minimum of the split path. Does nothing without request. Defaults to 1.
+            request: The request if applicable.
+        """
+
+        try:
+            split = path.split("/")
+
+            while "" in split:
+                split.remove("")
+
+            if len(split) < lensplit and request is not None:
+                request.send_response(400)
+                request.send_header("Content-Type", "application/json")
+                request.end_headers()
+                request.wfile.write(
+                    json.dumps({"error": "Incomplete path for this request."}).encode("utf-8") + b"\n"
+                )
+
+            conv = split[1]
+
+            split.remove(split[1])
+            path_without = "/" + "/".join(split)
+            #print(path_without)
+
+            path = path_without
+
+
+            conv = self.conversations.get(conv)
+
+            if not conv:
+                raise NoSuchConversation
+
+
+            getattr(conv, fn)(*args, **kwargs)
+
+
+        except NoSuchConversation:
+            if request is not None:
+                request.send_response(404)
+                request.send_header("Content-Type", "application/json")
+                request.end_headers()
+                request.wfile.write(
+                    json.dumps({"error": "Conversation not found."}).encode("utf-8") + b"\n"
+                )
+
+
+        except AttributeError:
+            self.logger.error("Invalid request callback registered.")
+            self.logger.debug(traceback.format_exc())
+            if request is not None:
+                request.send_response(500)
+                request.send_header("Content-Type", "application/json")
+                request.end_headers()
+                request.wfile.write(
+                    json.dumps({"error": "Invalid request callback registered."}).encode("utf-8") + b"\n"
+                )
 
 
 
@@ -273,3 +346,97 @@ class Hollowfire:
         request.wfile.write(
             json.dumps({"created": did_not_exist}).encode("utf-8") + b"\n"
         )
+
+
+
+
+
+    def change_provider(self, request):
+        """Change the provider.
+
+        Args:
+            request: The request.
+        """
+
+        try:
+            provider = request.path.removeprefix("/change-provider/")
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Failed to change provider: Bad path.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(500)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Bad path."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        self.conversation_class = {"ollama": OllamaAIProvider}.get(provider, provider) # Set or ignore.
+
+
+
+
+
+    def setup_provider(self, request):
+        """Setup the provider.
+
+        Args:
+            request: The request.
+        """
+
+        try:
+            request.path = request.path.removeprefix("/setup-provider/")
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Failed to setup provider: Bad path.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(500)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Bad path."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        data = None
+
+        try:
+            data = request.rfile.read(int(request.headers["Content-Length"])).decode("utf-8")
+
+        except ValueError:
+            # 411, content length required
+            request.send_response(411)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Content length is required."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Failed to setup provider: Bad request.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Bad request."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        try:
+            data = json.loads(data)
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Failed to setup provider: Bad request.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Bad request."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        self.call_on_behalf_noreq(request.path, "do_setup", data, request=request)
