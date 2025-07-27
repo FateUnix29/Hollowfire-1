@@ -57,6 +57,8 @@ class FM:
     success = f"{bold}{light_green}SUCCESS{remove_bold} "
     warning = f"{bold}{light_yellow}WARNING{remove_bold} "
     error = f"{bold}{light_red}ERROR{remove_bold} "
+    debug = f"{bold}{light_purple}DEBUG{remove_bold} "
+    test = f"{bold}{light_cyan}TEST{remove_bold} "
 
     trying = f"{bold}{light_yellow}TRYING{remove_bold} "
     ginfo = f"{bold}{light_green}INFO{remove_bold} "
@@ -68,6 +70,8 @@ class FM:
     rsuccess = f"{bold}{light_green}{reverse}SUCCESS{remove_reverse}{remove_bold} "
     rwarning = f"{bold}{light_yellow}{reverse}WARNING{remove_reverse}{remove_bold} "
     rerror = f"{bold}{light_red}{reverse}ERROR{remove_reverse}{remove_bold} "
+    rdebug = f"{bold}{light_purple}{reverse}DEBUG{remove_reverse}{remove_bold} "
+    rtest = f"{bold}{light_cyan}{reverse}TEST{remove_reverse}{remove_bold} "
 
     rtrying = f"{bold}{light_yellow}{reverse}TRYING{remove_reverse}{remove_bold} "
     rginfo = f"{bold}{light_green}{reverse}INFO{remove_reverse}{remove_bold} "

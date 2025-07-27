@@ -15,5 +15,7 @@ __all__ = [f[:-3] for f in _files if f.endswith('.py') and not f.startswith('_')
 exports = []
 
 for f in __all__:
-    module = __import__(f, globals(), locals(), ['exports'], 0)
-    globals()['exports'].extend(module.exports)
+    #print(f)
+    module = __import__(f"tools.{f}", globals(), locals(), ['exports'], 0)
+    exports.extend(module.exports)
+    #print(exports)

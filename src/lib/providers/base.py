@@ -154,7 +154,7 @@ class BaseAIProvider:
             pass
 
 
-        match request.method:
+        match request.command:
 
             case "GET": # Return the current conversation.
 
@@ -403,7 +403,7 @@ class BaseAIProvider:
             )
             return
 
-        method = request.method
+        method = request.command
 
         new_startout, base_file = locate_attribute(
             self.startouts_module,

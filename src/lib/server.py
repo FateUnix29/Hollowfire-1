@@ -34,7 +34,6 @@ from src.lib.firepanic import panic           # Error handling system.
 
 class NoSuchConversation(Exception):
     """Thrown when a conversation doesn't exist."""
-    pass
 
 
 
@@ -109,7 +108,7 @@ class HollowCoreCustomHTTP(http.server.HTTPServer):
 
             super().__init__(*args, **kwargs)
             #self.server.rqueue = getattr(self.server, "request_queue", Queue())
-            self.server.callbacks = getattr(self.server, "callbacks", {"GET": {}, "POST": {}, "PUT": {}, "DELETE": {}})
+            self.server.callbacks = getattr(self.server, "callbacks", {"GET": {}, "POST": {}, "PUT": {}, "DELETE": {}, "PATCH": {}})
 
 
 
@@ -194,6 +193,128 @@ class HollowCoreCustomHTTP(http.server.HTTPServer):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": "Failed to process POST request."}).encode("utf-8") + b"\n")
                 self.server.logger.error("Failed to process POST request.", exc_info=True)
+
+
+
+
+
+        def do_PUT(self): # pylint: disable=invalid-name disable=missing-function-docstring
+
+            try:
+
+                put_callbacks = self.server.callbacks["PUT"]
+
+                path_callbacks = []
+
+                for path, callbacks in put_callbacks.items(): # Get all callbacks registered for all paths.
+
+                    for callback in callbacks: # For every callback in this path:
+
+                        if callback[1] and self.path.startswith(path): # If it's an only_startswith (targets a parent of the current path):
+                            path_callbacks.append(callback) # Append.
+
+                        elif not callback[1] and self.path == path: # Else, if the path matches exactly:
+                            path_callbacks.append(callback)
+
+                for callback in path_callbacks:
+                    callback[0](self)
+
+                if not path_callbacks:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Path/endpoint not found (or wrong method)"}).encode("utf-8") + b"\n")
+
+            except NoSuchConversation:
+                pass
+
+            except: # pylint: disable=bare-except
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Failed to process PUT request."}).encode("utf-8") + b"\n")
+                self.server.logger.error("Failed to process PUT request.", exc_info=True)
+
+
+
+
+
+        def do_DELETE(self): # pylint: disable=invalid-name disable=missing-function-docstring
+            try:
+
+                delete_callbacks = self.server.callbacks["DELETE"]
+
+                path_callbacks = []
+
+                for path, callbacks in delete_callbacks.items(): # Get all callbacks registered for all paths.
+
+                    for callback in callbacks: # For every callback in this path:
+
+                        if callback[1] and self.path.startswith(path): # If it's an only_startswith (targets a parent of the current path):
+                            path_callbacks.append(callback) # Append.
+
+                        elif not callback[1] and self.path == path: # Else, if the path matches exactly:
+                            path_callbacks.append(callback)
+
+                for callback in path_callbacks:
+                    callback[0](self)
+
+                if not path_callbacks:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Path/endpoint not found (or wrong method)"}).encode("utf-8") + b"\n")
+
+            except NoSuchConversation:
+                pass
+
+            except: # pylint: disable=bare-except
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Failed to process DELETE request."}).encode("utf-8") + b"\n")
+                self.server.logger.error("Failed to process DELETE request.", exc_info=True)
+
+
+
+
+
+        def do_PATCH(self): # pylint: disable=invalid-name disable=missing-function-docstring
+
+            try:
+
+                patch_callbacks = self.server.callbacks["PATCH"]
+
+                path_callbacks = []
+
+                for path, callbacks in patch_callbacks.items(): # Get all callbacks registered for all paths.
+
+                    for callback in callbacks: # For every callback in this path:
+
+                        if callback[1] and self.path.startswith(path): # If it's an only_startswith (targets a parent of the current path):
+                            path_callbacks.append(callback) # Append.
+
+                        elif not callback[1] and self.path == path: # Else, if the path matches exactly:
+                            path_callbacks.append(callback)
+
+                for callback in path_callbacks:
+                    callback[0](self)
+
+                if not path_callbacks:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Path/endpoint not found (or wrong method)"}).encode("utf-8") + b"\n")
+
+            except NoSuchConversation:
+                pass
+
+            except: # pylint: disable=bare-except
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Failed to process PATCH request."}).encode("utf-8") + b"\n")
+                self.server.logger.error("Failed to process PATCH request.", exc_info=True)
 
 
 

@@ -70,8 +70,9 @@ class Hollowfire:
             startout_configuration (int, optional): The startout configuration to use.
         """
 
+        self.conversation_class = conversation_class
         self.conversations = {
-            "default": conversation_class(
+            "default": self.conversation_class(
                 logger,
                 logger_exit,
                 stream_handler,
@@ -137,6 +138,8 @@ class Hollowfire:
         self.hollowserver.request_callback('GET', '/save-persona', lambda req: self.call_on_behalf(req, "save_persona"), True)
         self.hollowserver.request_callback('GET', '/load-persona', lambda req: self.call_on_behalf(req, "load_persona"), True)
 
+        self.hollowserver.request_callback('GET', '/ensure-exist', self.ensure_conv_exists, True)
+
 
 
 
@@ -165,6 +168,7 @@ class Hollowfire:
 
             split.remove(split[1])
             path_without = "/" + "/".join(split)
+            #print(path_without)
 
             request.path = path_without
 
@@ -196,3 +200,76 @@ class Hollowfire:
             request.wfile.write(
                 json.dumps({"error": "Invalid request callback registered."}).encode("utf-8") + b"\n"
             )
+
+
+
+
+
+    def ensure_conv_exists(self, request):
+        """Ensure the conversation exists. If not found, create it.
+
+        Args:
+            request: The request.
+        """
+
+        did_not_exist = True
+
+        try:
+            path = request.path.removeprefix("/ensure-exists/")
+            path = path.split("/")
+
+            while "" in path:
+                path.remove("")
+
+            if len(path) < 1:
+                request.send_response(400)
+                request.send_header("Content-Type", "application/json")
+                request.end_headers()
+                request.wfile.write(
+                    json.dumps({"error": "Incomplete path for this request."}).encode("utf-8") + b"\n"
+                )
+
+            path = "/".join(path)
+
+            conv = self.conversations.get(path)
+
+            if not conv:
+                self.conversations[path] = self.conversation_class(
+                    self.logger,
+                    self.logger_exit,
+                    self.stream_handler,
+                    self.root_dir,
+                    self.system_replacements,
+                    self.reset_point,
+                    self.memory_dir,
+                    self.profile_dir,
+                    self.startouts_module,
+                    self.tools_module,
+                    self.main_module_name,
+                    self.cli_args,
+                    path,
+                    self.startout_configuration,
+                )
+                #print(self.conversations)
+
+            else:
+                did_not_exist = False
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Failed to ensure conversation exists.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(500)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Failed to ensure conversation exists."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        request.send_response(200)
+        request.send_header("Content-Type", "application/json")
+        request.end_headers()
+
+        request.wfile.write(
+            json.dumps({"created": did_not_exist}).encode("utf-8") + b"\n"
+        )

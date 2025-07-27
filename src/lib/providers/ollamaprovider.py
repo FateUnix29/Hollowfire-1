@@ -28,6 +28,7 @@ import ollama   # Used to access the Ollama API.
 
 #from src.lib.util.locateutils import locate_attribute # Utility functions for finding files, directories, things within lists, etc.
 from src.lib.providers.base import BaseAIProvider     # Base AI provider class.
+from src.lib.util.colorclass import print, FM # pylint: disable=redefined-builtin
 
 
 
@@ -63,6 +64,8 @@ class OllamaAIProvider(BaseAIProvider):
         }
 
         passed_model_config = passed_model_config | configuration
+
+        self.logger.debug(f"\nParameters:\n{passed_model_config}\n")
 
         return ollama.chat(**passed_model_config)
 
@@ -124,14 +127,16 @@ class OllamaAIProvider(BaseAIProvider):
         # The files will declare a list or tuple with their tool functions, __init__.py will combine them,
         # and then we discard any not within the tools we just .pop()'d.
 
-        tools_provided = []
-        for tool_export in self.tools_module.exports:
+        tools_provided = {}
+        for tool in self.tools_module.exports:
             # tool_export: list[function/callable]
-            for tool in tool_export:
-                if tool in tools:
-                    tools_provided.append({tool.__name__: tool})
+            #for tool in tool_export:
+            if tool.__name__ in tools:
+                tools_provided[tool.__name__] = tool
 
-        data["tools"] = [v.keys()[0] for v in tools_provided]
+        #data["tools"] = [list(v.values())[0] for v in tools_provided]
+        data["tools"] = list(tools_provided.values())
+        #print(data["tools"])
 
         # We will always internally stream the response, but it's up to the user if they want Hollowserver itself to stream it.
         data["stream"] = True
@@ -140,28 +145,30 @@ class OllamaAIProvider(BaseAIProvider):
         _count = 1
 
         self.logger.info("Generating response...")
-        self.logger.debug(f"\nParameters:\n{data}\n")
+        #self.logger.debug(f"\nParameters:\n{data}\n")
 
         while _count < 25:
             self.logger.debug(f"Attempt {_count}.")
 
             try:
-                print("here")
+                if do_streaming:
+                    print(f"{FM.debug} ", end="", flush=True, reset_color=False)
+                #print("here")
                 completion: ollama.ChatResponse = self.completion("qwen3", data)
-                print("there")
+                #print("there")
 
                 if not completion:
                     self.logger.error("Blank result.")
                     _count += 1
                     continue
 
-                print("everywhere")
+                #print("everywhere")
 
                 #used_tools = []
 
                 for chunk in completion:
 
-                    print('nowhere', chunk)
+                    #print('nowhere', chunk)
 
                     chunk_message = chunk.message
 
@@ -171,37 +178,34 @@ class OllamaAIProvider(BaseAIProvider):
                     #if chunk_tools:
                     #    used_tools += chunk_tools
 
-                    print(do_streaming, chunk_content, chunk_tools)
+                    #print(do_streaming, chunk_content, chunk_tools)
 
                     send_json = {
                         "content": chunk_content,
-                        "tool_calls": chunk_tools
+                        "tool_calls": [tool.function.name for tool in chunk_tools] if chunk_tools else [],
                     }
 
                     tool_responses = {}
 
                     if chunk_tools:
                         for tool in chunk_tools:
-                            self.logger.info(f"Tool used: {tool.name}")
+                            tool_fn = tool.function
+                            self.logger.info(f"Tool used: {tool_fn.name}")
 
-                            # Find the tool in the modules.
-                            #tool_module = locate_attribute(
-                            #    self.tools_module,
-                            #    self.main_module_name,
-                            #    tool.name
-                            #)
+                            try:
+                                tool_responses[tool_fn.name] = f"{tool_fn.name} returned:\n{tools_provided.get(tool_fn.name)(**tool_fn.arguments)}"
 
-                            # MAYBE works. TODO test
+                            except AttributeError:
+                                tool_responses[tool_fn.name] = f"invalid tool: {tool_fn.name}"
 
-                            # pylint: disable=no-member # false positive
-                            # pylint: disable=not-callable
-                            tool_responses[tool.name] = f"{tool.name} returned:\n{tool.function(**tool.arguments)}"
-                            # pylint: enable=not-callable
-                            # pylint: enable=no-member
-                            # better way to do this???
+                            except: # pylint: disable=bare-except
+                                tool_responses[tool_fn.name] = f"{tool_fn.name} errored during execution:\n{traceback.format_exc()}"
+
+                            # NOTE: better way to do this???
 
                     if tool_responses:
                         send_json["tool_responses"] = tool_responses
+                        #print(send_json)
 
                     result.append(send_json)
 
@@ -215,7 +219,8 @@ class OllamaAIProvider(BaseAIProvider):
                             request.end_headers()
 
 
-                        print(f"DBG!: {send_json}, {result}")
+                        #print(f"DBG!: {send_json}, {result}")
+                        print(send_json["content"], end="", flush=True, reset_color=False)
                         encoded_send_json = json.dumps(send_json).encode("utf-8")
 
                         request.wfile.write(
@@ -229,6 +234,7 @@ class OllamaAIProvider(BaseAIProvider):
 
                 if do_streaming:
                     request.wfile.write(b"0\r\n\r\n") # EOF.
+                    print() # Add extra newline and reset colors.
 
                 else:
                     request.send_response(200)
@@ -236,6 +242,8 @@ class OllamaAIProvider(BaseAIProvider):
                     request.end_headers()
                     request.wfile.write(json.dumps(result).encode("utf-8") + b"\n")
                     # oh this was already configured for not being a string
+
+                self.logger.info("".join([c["content"] for c in result]))
 
                 return
 
