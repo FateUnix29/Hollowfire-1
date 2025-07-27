@@ -56,11 +56,18 @@ class OllamaAIProvider(BaseAIProvider):
 
         # Let the caller do errors.
         passed_model_config = {
-            "model": configuration.pop("model", model),
+            "model": configuration.pop("model", model or self.model),
             "messages": configuration.pop("messages", self.conversation),
             "stream": configuration.pop("stream", True),
-            "think": configuration.pop("think", True),
-            "options": configuration.pop("options", {}), # Now I know: Temperature can be set here and stuff I think!
+            "think": configuration.pop("think", self.think),
+            "options": configuration.pop("options", {
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "top_k": self.top_k,
+                "num_ctx": self.num_ctx,
+                "repeat_penalty": self.repeat_penalty,
+                "stop": self.stop
+            }), # Now I know: temperature can be set here and stuff I think.
         }
 
         passed_model_config = passed_model_config | configuration
@@ -154,7 +161,7 @@ class OllamaAIProvider(BaseAIProvider):
                 if do_streaming:
                     print(f"{FM.debug} ", end="", flush=True, reset_color=False)
                 #print("here")
-                completion: ollama.ChatResponse = self.completion("qwen3", data)
+                completion: ollama.ChatResponse = self.completion("", data)
                 #print("there")
 
                 if not completion:

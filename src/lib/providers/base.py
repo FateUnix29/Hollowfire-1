@@ -94,6 +94,7 @@ class BaseAIProvider:
         self.num_ctx = 40960
         self.repeat_penalty = 1.1
         self.stop = ""
+        self.think = True
 
         # Now, instead of having multiple conversations, this class *itself* is a conversation.
         self.conversation = self.update_reset_point()
