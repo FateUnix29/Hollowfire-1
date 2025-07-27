@@ -88,7 +88,7 @@ class BaseAIProvider:
 
         # default AI configurations
         self.model = "qwen3"
-        self.temperature = 0.5
+        self.temperature = 0.6
         self.top_p = 0.95
         self.top_k = 20
         self.num_ctx = 40960
