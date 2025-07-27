@@ -515,3 +515,128 @@ class BaseAIProvider:
         Args:
             request: The request.
         """
+
+
+
+
+
+#    def save_persona(self, request):
+#        """Save the current profile/persona.
+#
+#        Args:
+#            request: The request."""
+#
+#        try:
+#            path_used = request.path.removeprefix("/save-persona/")
+#
+#        except: # pylint: disable=bare-except
+#            self.logger.error("Persona saving request did not have a path.")
+#            self.logger.debug(traceback.format_exc())
+#            request.send_response(400)
+#            request.send_header("Content-Type", "application/json")
+#            request.end_headers()
+#            request.wfile.write(
+#                json.dumps({"error": "Request did not have a valid path/file name."}).encode("utf-8") + b"\n"
+#            )
+#            return
+#
+#        # Save the file to memory_dir/filename.
+#
+#        try:
+#            with open(os.path.join(self.memory_dir, path_used), "w", encoding="utf-8") as f:
+#
+#                write = {
+#                    "root_dir": self.root_dir,
+#                    "system_replacements": self.system_replacements,
+#                    "reset_point": self.reset_point,
+#                    "memory_dir": self.memory_dir,
+#                    "profile_dir": self.profile_dir,
+#                    "main_module_name": self.main_module_name,
+#                    "conversation_id": self.conversation_id,
+#                }
+#
+#                f.write(json.dumps(write, indent=4))
+#
+#        except: # pylint: disable=bare-except
+#            self.logger.error("Failed to save memory to disk.")
+#            self.logger.debug(traceback.format_exc())
+#            request.send_response(500)
+#            request.send_header("Content-Type", "application/json")
+#            request.end_headers()
+#            request.wfile.write(
+#                json.dumps({"error": "Failed to save memory to disk."}).encode("utf-8") + b"\n"
+#            )
+#            return
+#
+#        self.logger.info("Memory saved.")
+#        request.send_response(200)
+#        request.end_headers()
+#
+#
+#
+#
+#
+#    def load(self, request):
+#        """Load a file into the current memory.
+#
+#        Args:
+#            request: The request."""
+#
+#        try:
+#            path_used = request.path.removeprefix("/load/")
+#
+#        except: # pylint: disable=bare-except
+#            self.logger.error("Memory loading request did not have a path.")
+#            self.logger.debug(traceback.format_exc())
+#            request.send_response(400)
+#            request.send_header("Content-Type", "application/json")
+#            request.end_headers()
+#            request.wfile.write(
+#                json.dumps({"error": "Request did not have a valid path/file name."}).encode("utf-8") + b"\n"
+#            )
+#            return
+#
+#        # SANITY CHECKS: Does path even exist?
+#        file_path = os.path.join(self.memory_dir, path_used)
+#
+#        if not os.path.exists(file_path):
+#            self.logger.error("Failed to load memory from disk: File does not exist.")
+#            request.send_response(404)
+#            request.send_header("Content-Type", "application/json")
+#            request.end_headers()
+#            request.wfile.write(
+#                json.dumps({"error": "File does not exist."}).encode("utf-8") + b"\n"
+#            )
+#            return
+#
+#        # Is it a file?
+#        if not os.path.isfile(file_path):
+#            self.logger.error("Failed to load memory from disk: Path is not a file.")
+#            request.send_response(400)
+#            request.send_header("Content-Type", "application/json")
+#            request.end_headers()
+#            request.wfile.write(
+#                json.dumps({"error": "Path is not a file."}).encode("utf-8") + b"\n"
+#            )
+#            return
+#
+#        # Cool, go ahead then.
+#
+#        try:
+#            with open(os.path.join(self.memory_dir, path_used), "r", encoding="utf-8") as f:
+#                self.conversation = json.load(f)
+#
+#        except: # pylint: disable=bare-except
+#            self.logger.error("Failed to load memory from disk.")
+#            self.logger.debug(traceback.format_exc())
+#            request.send_response(500)
+#            request.send_header("Content-Type", "application/json")
+#            request.end_headers()
+#            request.wfile.write(
+#                json.dumps({"error": "Failed to load memory from disk."}).encode("utf-8") + b"\n"
+#            )
+#            return
+#
+#        self.logger.info("Memory loaded from disk.")
+#        request.send_response(200)
+#        request.end_headers()
