@@ -86,6 +86,15 @@ class BaseAIProvider:
         self.conversation_id = conversation_id
         self.startout_configuration = startout_configuration
 
+        # default AI configurations
+        self.model = "qwen3"
+        self.temperature = 0.5
+        self.top_p = 0.95
+        self.top_k = 20
+        self.num_ctx = 40960
+        self.repeat_penalty = 1.1
+        self.stop = ""
+
         # Now, instead of having multiple conversations, this class *itself* is a conversation.
         self.conversation = self.update_reset_point()
 
@@ -345,7 +354,7 @@ class BaseAIProvider:
         # Cool, go ahead then.
 
         try:
-            with open(os.path.join(self.memory_dir, path_used), "r", encoding="utf-8") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 self.conversation = json.load(f)
 
         except: # pylint: disable=bare-except
@@ -520,123 +529,131 @@ class BaseAIProvider:
 
 
 
-#    def save_persona(self, request):
-#        """Save the current profile/persona.
-#
-#        Args:
-#            request: The request."""
-#
-#        try:
-#            path_used = request.path.removeprefix("/save-persona/")
-#
-#        except: # pylint: disable=bare-except
-#            self.logger.error("Persona saving request did not have a path.")
-#            self.logger.debug(traceback.format_exc())
-#            request.send_response(400)
-#            request.send_header("Content-Type", "application/json")
-#            request.end_headers()
-#            request.wfile.write(
-#                json.dumps({"error": "Request did not have a valid path/file name."}).encode("utf-8") + b"\n"
-#            )
-#            return
-#
-#        # Save the file to memory_dir/filename.
-#
-#        try:
-#            with open(os.path.join(self.memory_dir, path_used), "w", encoding="utf-8") as f:
-#
-#                write = {
-#                    "root_dir": self.root_dir,
-#                    "system_replacements": self.system_replacements,
-#                    "reset_point": self.reset_point,
-#                    "memory_dir": self.memory_dir,
-#                    "profile_dir": self.profile_dir,
-#                    "main_module_name": self.main_module_name,
-#                    "conversation_id": self.conversation_id,
-#                }
-#
-#                f.write(json.dumps(write, indent=4))
-#
-#        except: # pylint: disable=bare-except
-#            self.logger.error("Failed to save memory to disk.")
-#            self.logger.debug(traceback.format_exc())
-#            request.send_response(500)
-#            request.send_header("Content-Type", "application/json")
-#            request.end_headers()
-#            request.wfile.write(
-#                json.dumps({"error": "Failed to save memory to disk."}).encode("utf-8") + b"\n"
-#            )
-#            return
-#
-#        self.logger.info("Memory saved.")
-#        request.send_response(200)
-#        request.end_headers()
-#
-#
-#
-#
-#
-#    def load(self, request):
-#        """Load a file into the current memory.
-#
-#        Args:
-#            request: The request."""
-#
-#        try:
-#            path_used = request.path.removeprefix("/load/")
-#
-#        except: # pylint: disable=bare-except
-#            self.logger.error("Memory loading request did not have a path.")
-#            self.logger.debug(traceback.format_exc())
-#            request.send_response(400)
-#            request.send_header("Content-Type", "application/json")
-#            request.end_headers()
-#            request.wfile.write(
-#                json.dumps({"error": "Request did not have a valid path/file name."}).encode("utf-8") + b"\n"
-#            )
-#            return
-#
-#        # SANITY CHECKS: Does path even exist?
-#        file_path = os.path.join(self.memory_dir, path_used)
-#
-#        if not os.path.exists(file_path):
-#            self.logger.error("Failed to load memory from disk: File does not exist.")
-#            request.send_response(404)
-#            request.send_header("Content-Type", "application/json")
-#            request.end_headers()
-#            request.wfile.write(
-#                json.dumps({"error": "File does not exist."}).encode("utf-8") + b"\n"
-#            )
-#            return
-#
-#        # Is it a file?
-#        if not os.path.isfile(file_path):
-#            self.logger.error("Failed to load memory from disk: Path is not a file.")
-#            request.send_response(400)
-#            request.send_header("Content-Type", "application/json")
-#            request.end_headers()
-#            request.wfile.write(
-#                json.dumps({"error": "Path is not a file."}).encode("utf-8") + b"\n"
-#            )
-#            return
-#
-#        # Cool, go ahead then.
-#
-#        try:
-#            with open(os.path.join(self.memory_dir, path_used), "r", encoding="utf-8") as f:
-#                self.conversation = json.load(f)
-#
-#        except: # pylint: disable=bare-except
-#            self.logger.error("Failed to load memory from disk.")
-#            self.logger.debug(traceback.format_exc())
-#            request.send_response(500)
-#            request.send_header("Content-Type", "application/json")
-#            request.end_headers()
-#            request.wfile.write(
-#                json.dumps({"error": "Failed to load memory from disk."}).encode("utf-8") + b"\n"
-#            )
-#            return
-#
-#        self.logger.info("Memory loaded from disk.")
-#        request.send_response(200)
-#        request.end_headers()
+    def save_persona(self, request):
+        """Save the current profile/persona.
+
+        Args:
+            request: The request."""
+
+        try:
+            path_used = request.path.removeprefix("/save-persona/")
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Persona saving request did not have a path.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Request did not have a valid path/file name."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        # Save the file to memory_dir/filename.
+
+        try:
+            with open(os.path.join(self.profile_dir, path_used), "w", encoding="utf-8") as f:
+
+                write = {
+                    "root_dir": self.root_dir,
+                    "system_replacements": self.system_replacements,
+                    "reset_point": self.reset_point,
+                    "memory_dir": self.memory_dir,
+                    "profile_dir": self.profile_dir,
+                    "main_module_name": self.main_module_name,
+                    "conversation_id": self.conversation_id,
+                    "startout_configuration": self.startout_configuration,
+
+                    "model": self.model,
+                    "temperature": self.temperature,
+                    "num_ctx": self.num_ctx,
+                    "top_p": self.top_p,
+                    "repeat_penalty": self.repeat_penalty,
+                    "stop": self.stop
+                }
+
+                f.write(json.dumps(write, indent=4))
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Failed to save memory to disk.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(500)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Failed to save memory to disk."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        self.logger.info("Memory saved.")
+        request.send_response(200)
+        request.end_headers()
+
+
+
+
+
+    def load_persona(self, request):
+        """Load a file containing a profile/persona, replacing the current one.
+
+        Args:
+            request: The request."""
+
+        try:
+            path_used = request.path.removeprefix("/load-persona/")
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Persona loading request did not have a path.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Request did not have a valid path/file name."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        # SANITY CHECKS: Does path even exist?
+        file_path = os.path.join(self.profile_dir, path_used)
+
+        if not os.path.exists(file_path):
+            self.logger.error("Failed to load persona from disk: File does not exist.")
+            request.send_response(404)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "File does not exist."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        # Is it a file?
+        if not os.path.isfile(file_path):
+            self.logger.error("Failed to load persona from disk: Path is not a file.")
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Path is not a file."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        # Cool, go ahead then.
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                self.__dict__.update(json.load(f))
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Failed to load memory from disk.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(500)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Failed to load memory from disk."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        self.logger.info("Memory loaded from disk.")
+        request.send_response(200)
+        request.end_headers()
