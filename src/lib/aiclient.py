@@ -145,6 +145,8 @@ class Hollowfire:
         self.hollowserver.request_callback('GET', '/change-provider', self.change_provider, True)
         self.hollowserver.request_callback('POST', '/setup-provider', self.setup_provider, True)
 
+        self.hollowserver.request_callback('POST', '/set-default', lambda req: self.call_on_behalf(req, "set_default"), True)
+
 
 
 

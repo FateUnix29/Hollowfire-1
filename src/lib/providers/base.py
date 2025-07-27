@@ -657,3 +657,67 @@ class BaseAIProvider:
         self.logger.info("Memory loaded from disk.")
         request.send_response(200)
         request.end_headers()
+
+
+
+
+
+    def set_default(self, request):
+        """Set the default configuration for xyz persona variable.
+
+        Args:
+            request: The request."""
+
+        # POST only
+
+        val = None
+
+        try:
+            val = json.loads(request.rfile.read(int(request.headers["Content-Length"]))).decode("utf-8")
+
+        except ValueError:
+            # 411, content length required
+            request.send_response(411)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Content length required."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        except: # pylint: disable=bare-except
+            self.logger.error("Failed to set default.")
+            self.logger.debug(traceback.format_exc())
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Bad request."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        if not isinstance(val, dict):
+            self.logger.error("Failed to set default: Not a dictionary.")
+            request.send_response(400)
+            request.send_header("Content-Type", "application/json")
+            request.end_headers()
+            request.wfile.write(
+                json.dumps({"error": "Bad request."}).encode("utf-8") + b"\n"
+            )
+            return
+
+        for key in list(val.keys()):
+            if key not in ["model", "temperature", "num_ctx", "top_p", "repeat_penalty", "stop"]:
+                self.logger.error("Set default request did not have a valid path.")
+                request.send_response(400)
+                request.send_header("Content-Type", "application/json")
+                request.end_headers()
+                request.wfile.write(
+                    json.dumps({"error": "Request did not have a valid path."}).encode("utf-8") + b"\n"
+                )
+                return
+
+        self.__dict__.update(val)
+
+        request.send_response(200)
+        request.end_headers()
