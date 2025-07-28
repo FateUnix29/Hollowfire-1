@@ -78,6 +78,8 @@ class OllamaAIProvider(BaseAIProvider):
 
 
 
+
+
     def completion_request(self, request):
         """Request a completion from the AI with a web-request.
 
@@ -200,7 +202,8 @@ class OllamaAIProvider(BaseAIProvider):
                             self.logger.info(f"Tool used: {tool_fn.name}")
 
                             try:
-                                tool_responses[tool_fn.name] = f"{tool_fn.name} returned:\n{tools_provided.get(tool_fn.name)(**tool_fn.arguments)}"
+                                tool_responses[tool_fn.name] = \
+                                    f"{tool_fn.name} returned:\n{tools_provided.get(tool_fn.name)(**tool_fn.arguments)}"
 
                             except AttributeError:
                                 tool_responses[tool_fn.name] = f"invalid tool: {tool_fn.name}"
