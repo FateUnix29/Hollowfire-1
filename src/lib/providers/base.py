@@ -93,7 +93,7 @@ class BaseAIProvider:
         self.top_k = 20
         self.num_ctx = 40960
         self.repeat_penalty = 1.1
-        self.stop = ""
+        self.stop = []
         self.think = True
 
         # Now, instead of having multiple conversations, this class *itself* is a conversation.
