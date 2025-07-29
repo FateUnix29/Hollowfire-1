@@ -91,7 +91,6 @@ class BaseAIProvider:
         self.temperature = 0.6
         self.top_p = 0.95
         self.top_k = 20
-        self.num_ctx = 32768
         self.repeat_penalty = 1.1
         self.stop = []
         self.think = True
@@ -567,7 +566,6 @@ class BaseAIProvider:
 
                     "model": self.model,
                     "temperature": self.temperature,
-                    "num_ctx": self.num_ctx,
                     "top_p": self.top_p,
                     "repeat_penalty": self.repeat_penalty,
                     "stop": self.stop
@@ -708,7 +706,7 @@ class BaseAIProvider:
             return
 
         for key in list(val.keys()):
-            if key not in ["model", "temperature", "num_ctx", "top_p", "repeat_penalty", "stop"]:
+            if key not in ["model", "temperature", "top_p", "top_k", "repeat_penalty", "stop", "think"]:
                 self.logger.error("Set default request did not have a valid path.")
                 request.send_response(400)
                 request.send_header("Content-Type", "application/json")
