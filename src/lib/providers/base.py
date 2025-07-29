@@ -91,7 +91,7 @@ class BaseAIProvider:
         self.temperature = 0.6
         self.top_p = 0.95
         self.top_k = 20
-        self.num_ctx = 40960
+        self.num_ctx = 32768
         self.repeat_penalty = 1.1
         self.stop = []
         self.think = True
@@ -674,7 +674,7 @@ class BaseAIProvider:
         val = None
 
         try:
-            val = json.loads(request.rfile.read(int(request.headers["Content-Length"]))).decode("utf-8")
+            val = json.loads(request.rfile.read(int(request.headers["Content-Length"])).decode("utf-8"))
 
         except ValueError:
             # 411, content length required
