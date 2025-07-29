@@ -160,8 +160,8 @@ class OllamaAIProvider(BaseAIProvider):
             self.logger.debug(f"Attempt {_count}.")
 
             try:
-                if do_streaming:
-                    print(f"{FM.debug} ", end="", flush=True, reset_color=False)
+                #if do_streaming:
+                print(f"{FM.debug} ", end="", flush=True, reset_color=False)
                 #print("here")
                 completion: ollama.ChatResponse = self.completion("", data)
                 #print("there")
@@ -183,6 +183,7 @@ class OllamaAIProvider(BaseAIProvider):
 
                     chunk_content = getattr(chunk_message, "content", None)
                     chunk_tools = getattr(chunk_message, "tool_calls", None)
+                    chunk_thinking = getattr(chunk_message, "thinking", None)
 
                     #if chunk_tools:
                     #    used_tools += chunk_tools
@@ -192,6 +193,7 @@ class OllamaAIProvider(BaseAIProvider):
                     send_json = {
                         "content": chunk_content,
                         "tool_calls": [tool.function.name for tool in chunk_tools] if chunk_tools else [],
+                        "thinking": chunk_thinking
                     }
 
                     tool_responses = {}
@@ -218,6 +220,7 @@ class OllamaAIProvider(BaseAIProvider):
                         #print(send_json)
 
                     result.append(send_json)
+                    print(send_json["content"] or send_json["thinking"], end="", flush=True, reset_color=False)
 
                     if do_streaming:
 
@@ -230,7 +233,6 @@ class OllamaAIProvider(BaseAIProvider):
 
 
                         #print(f"DBG!: {send_json}, {result}")
-                        print(send_json["content"], end="", flush=True, reset_color=False)
                         encoded_send_json = json.dumps(send_json).encode("utf-8")
 
                         request.wfile.write(
@@ -241,10 +243,10 @@ class OllamaAIProvider(BaseAIProvider):
 
                         request.wfile.flush()
 
+                print() # Add extra newline and reset colors.
 
                 if do_streaming:
                     request.wfile.write(b"0\r\n\r\n") # EOF.
-                    print() # Add extra newline and reset colors.
 
                 else:
                     request.send_response(200)

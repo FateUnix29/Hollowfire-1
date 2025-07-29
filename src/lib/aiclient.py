@@ -11,6 +11,8 @@
 
 # Imports: Built-in/Standard
 import json
+import traceback
+import asyncio
 
 
 # Imports: Local/source
@@ -20,8 +22,7 @@ from src.lib.providers.ollamaprovider import OllamaAIProvider
 
 
 # Imports: Third-party
-import traceback
-
+# ...
 
 
 # Classes
@@ -186,8 +187,10 @@ class Hollowfire:
             if not conv:
                 raise NoSuchConversation
 
-
-            getattr(conv, fn)(request)
+            if not asyncio.iscoroutinefunction(getattr(conv, fn)):
+                getattr(conv, fn)(request)
+            else:
+                asyncio.run(getattr(conv, fn)(request))
 
 
         except NoSuchConversation:
@@ -252,7 +255,10 @@ class Hollowfire:
                 raise NoSuchConversation
 
 
-            getattr(conv, fn)(*args, **kwargs)
+            if not asyncio.iscoroutinefunction(getattr(conv, fn)):
+                getattr(conv, fn)(*args, **kwargs)
+            else:
+                asyncio.run(getattr(conv, fn)(*args, **kwargs))
 
 
         except NoSuchConversation:
