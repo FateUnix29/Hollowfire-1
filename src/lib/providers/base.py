@@ -88,12 +88,13 @@ class BaseAIProvider:
 
         # default AI configurations
         self.model = "qwen3"
-        self.temperature = 0.6
+        self.temperature = 0.65
         self.top_p = 0.95
         self.top_k = 20
-        self.repeat_penalty = 1.1
+        self.repeat_penalty = 1.3
         self.stop = []
         self.think = True
+        self.num_ctx = 4096 # WHY????
 
         # Now, instead of having multiple conversations, this class *itself* is a conversation.
         self.conversation = self.update_reset_point()
@@ -193,7 +194,7 @@ class BaseAIProvider:
 
             case "DELETE":
                 try:
-                    index = int(path_used.split("/"))[-1]
+                    index = int(path_used.split("/")[-1])
 
                     abs_index = abs(index)
                     abs_index -= 1 if index < 0 else 0 # Balance it out; -1 is equivalent to 0 in reverse.
@@ -212,7 +213,7 @@ class BaseAIProvider:
                         json.dumps({"error": "Request did not have a valid index."}).encode("utf-8") + b"\n"
                     )
 
-                del self.conversation[abs_index]
+                del self.conversation[index]
                 request.send_response(200)
                 request.send_header("Content-Type", "application/json")
                 request.end_headers()
@@ -222,7 +223,7 @@ class BaseAIProvider:
 
             case "PATCH":
                 try:
-                    index = int(path_used.split("/"))[-1]
+                    index = int(path_used.split("/")[-1])
 
                     abs_index = abs(index)
                     abs_index -= 1 if index < 0 else 0 # Balance it out; -1 is equivalent to 0 in reverse.
@@ -241,7 +242,7 @@ class BaseAIProvider:
                         json.dumps({"error": "Request did not have a valid index."}).encode("utf-8") + b"\n"
                     )
 
-                self.conversation[abs_index] = json_data
+                self.conversation[index] = json_data
                 request.send_response(200)
                 request.send_header("Content-Type", "application/json")
                 request.end_headers()
@@ -706,7 +707,7 @@ class BaseAIProvider:
             return
 
         for key in list(val.keys()):
-            if key not in ["model", "temperature", "top_p", "top_k", "repeat_penalty", "stop", "think"]:
+            if key not in ["model", "temperature", "top_p", "top_k", "repeat_penalty", "stop", "think", "num_ctx"]:
                 self.logger.error("Set default request did not have a valid path.")
                 request.send_response(400)
                 request.send_header("Content-Type", "application/json")

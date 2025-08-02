@@ -65,7 +65,8 @@ class OllamaAIProvider(BaseAIProvider):
                 "top_p": self.top_p,
                 "top_k": self.top_k,
                 "repeat_penalty": self.repeat_penalty,
-                "stop": self.stop
+                "stop": self.stop,
+                "num_ctx": self.num_ctx,
             }), # Now I know: temperature can be set here and stuff I think.
         }
 
