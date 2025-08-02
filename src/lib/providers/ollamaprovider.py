@@ -28,7 +28,7 @@ import ollama   # Used to access the Ollama API.
 
 #from src.lib.util.locateutils import locate_attribute # Utility functions for finding files, directories, things within lists, etc.
 from src.lib.providers.base import BaseAIProvider     # Base AI provider class.
-#from src.lib.util.colorclass import print, FM # pylint: disable=redefined-builtin
+from src.lib.util.colorclass import print # pylint: disable=redefined-builtin #FM
 
 
 
