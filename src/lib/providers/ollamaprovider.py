@@ -152,6 +152,7 @@ class OllamaAIProvider(BaseAIProvider):
 
         result = []
         _count = 1
+        sent_headers_so_fuck_off = False
 
         self.logger.info("Generating response...")
         #self.logger.debug(f"\nParameters:\n{data}\n")
@@ -220,20 +221,21 @@ class OllamaAIProvider(BaseAIProvider):
                         #print(send_json)
 
                     result.append(send_json)
-                    print(send_json["content"] or send_json["thinking"], end="", flush=True, reset_color=False)
+                    print(send_json["content"] or send_json["thinking"] or "", end="", flush=True, reset_color=False)
 
                     if do_streaming:
 
                         # Send chunked.
-                        if _count == 1:
+                        if _count <= 1 and not sent_headers_so_fuck_off: # for fucks sake...
                             request.send_response(200)
                             request.send_header("Content-Type", "application/json")
                             request.send_header("Transfer-Encoding", "chunked")
                             request.end_headers()
+                            sent_headers_so_fuck_off = True
 
 
                         #print(f"DBG!: {send_json}, {result}")
-                        encoded_send_json = json.dumps(send_json).encode("utf-8")
+                        encoded_send_json = json.dumps(send_json).encode("utf-8") + b"\n"
 
                         request.wfile.write(
                             f"{len(encoded_send_json):x}\r\n".encode("utf-8")
@@ -248,11 +250,12 @@ class OllamaAIProvider(BaseAIProvider):
                 if do_streaming:
                     request.wfile.write(b"0\r\n\r\n") # EOF.
 
-                else:
+                elif not sent_headers_so_fuck_off:
                     request.send_response(200)
                     request.send_header("Content-Type", "application/json")
                     request.end_headers()
                     request.wfile.write(json.dumps(result).encode("utf-8") + b"\n")
+                    sent_headers_so_fuck_off = True
                     # oh this was already configured for not being a string
 
                 self.logger.info("".join([c["content"] for c in result]))
