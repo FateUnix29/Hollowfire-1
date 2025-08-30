@@ -25,9 +25,9 @@ from copy import deepcopy
 import ollama   # Used to access the Ollama API.
 
 # pylint: disable=invalid-name
+import numpy as np # requirement now
 faiss_is_available = False
 try:
-    import numpy as np
     import faiss
     faiss_is_available = True
 except ImportError:
@@ -47,6 +47,10 @@ from src.lib.util.colorclass import print # pylint: disable=redefined-builtin #F
 
 def embed_text(text: str) -> np.ndarray:
     """Return a 1-D numpy array (float32) using Ollama's embedding endpoint."""
+
+    if not faiss_is_available:
+        raise RuntimeError("FAISS is not available. Please install it. I personally recommend building it from source.")
+
     resp = ollama.embed(model="all-minilm:latest", input=text)
     vec = np.asarray(resp.embeddings, dtype=np.float32) # pylint: disable=no-member # delusional pylint
 
@@ -60,6 +64,10 @@ def embed_text(text: str) -> np.ndarray:
 
 def create_index(docs: list[str], faiss_type: str):
     """Create a FAISS index from the provided documents."""
+
+    if not faiss_is_available:
+        raise RuntimeError("FAISS is not available. Please install it. I personally recommend building it from source.")
+
     vectors = np.vstack([embed_text(d) for d in docs])
 
     match faiss_type:
@@ -76,6 +84,10 @@ def create_index(docs: list[str], faiss_type: str):
 
 def retrieve(docs: list[str], query: str, index: faiss.Index, k=5):
     """Retrieve relevant documents from the index based on the provided query."""
+
+    if not faiss_is_available:
+        raise RuntimeError("FAISS is not available. Please install it. I personally recommend building it from source.")
+
     vec = embed_text(query)
     k = min(k, len(docs))          # <-- prevent duplicates
     _, idxs = index.search(np.array([vec]), k)
