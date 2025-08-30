@@ -145,7 +145,10 @@ class OllamaAIProvider(BaseAIProvider):
             faiss_information["results"] = retrieve(docs, query, self.index, k)
 
             # insert right before the last index... but conveniently never saving it to the real conversation!
-            messages.insert(-1, faiss_information)
+            messages.insert(-1, {
+                "role": "system",
+                "content": f"Context...\n{"\n\n".join(faiss_information['results'])}",
+            })
 
 
         passed_model_config = {
