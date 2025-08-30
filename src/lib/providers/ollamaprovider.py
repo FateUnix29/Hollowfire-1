@@ -131,6 +131,9 @@ class OllamaAIProvider(BaseAIProvider):
             if getattr(self, "index", None) is None:
                 self.index = create_index(docs, # pylint: disable=attribute-defined-outside-init
                                           faiss_information.get("faiss_type", "IndexFlatL2"))
+            else:
+                self.index.reset()
+
 
             self.index.add(np.vstack([embed_text(d) for d in docs])) # pylint: disable=no-value-for-parameter
 
