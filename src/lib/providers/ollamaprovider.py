@@ -18,10 +18,21 @@ import json                    # Used to parse JSON files.
 #import logging                 # Used for logging.
 #from copy import deepcopy      # Used for deep copying objects.
 import traceback               # Used to get information about exceptions.
+from copy import deepcopy
 
 # Imports: Third-party
 #import pydantic # Used for data validation.
 import ollama   # Used to access the Ollama API.
+
+# pylint: disable=invalid-name
+faiss_is_available = False
+try:
+    import numpy as np
+    import faiss
+    faiss_is_available = True
+except ImportError:
+    pass
+# pylint: enable=invalid-name
 
 
 # Imports: Local/source
@@ -29,6 +40,46 @@ import ollama   # Used to access the Ollama API.
 #from src.lib.util.locateutils import locate_attribute # Utility functions for finding files, directories, things within lists, etc.
 from src.lib.providers.base import BaseAIProvider     # Base AI provider class.
 from src.lib.util.colorclass import print # pylint: disable=redefined-builtin #FM
+
+
+
+# Functions
+
+def embed_text(text: str) -> np.ndarray:
+    """Return a 1-D numpy array (float32) using Ollama's embedding endpoint."""
+    resp = ollama.embed(model="all-minilm:latest", input=text)
+    vec = np.asarray(resp.embeddings, dtype=np.float32) # pylint: disable=no-member # delusional pylint
+
+    # Normalise (FAISS works best with L2‑normalised vectors)
+    norm = np.linalg.norm(vec)
+    return vec / norm if norm != 0 else vec
+
+
+
+
+
+def create_index(docs: list[str], faiss_type: str):
+    """Create a FAISS index from the provided documents."""
+    vectors = np.vstack([embed_text(d) for d in docs])
+
+    match faiss_type:
+        case "ivfflat":
+            raise NotImplementedError
+        case _: # IndexFlatL2 is the default, so no explicit case is needed.
+            index = faiss.IndexFlatL2(vectors.shape[1])
+
+    return index
+
+
+
+
+
+def retrieve(docs: list[str], query: str, index: faiss.Index, k=5):
+    """Retrieve relevant documents from the index based on the provided query."""
+    vec = embed_text(query)
+    k = min(k, len(docs))          # <-- prevent duplicates
+    _, idxs = index.search(np.array([vec]), k)
+    return [docs[i] for i in idxs[0]]
 
 
 
@@ -45,9 +96,12 @@ class OllamaAIProvider(BaseAIProvider):
         """Set up the AI provider."""
         # Ollama doesn't need any setup!
 
+        if not faiss_is_available:
+            self.logger.warning("faiss is not available. It will be disabled.\nApologies for the delayed warning.")
 
 
-    def completion(self, model: str, configuration: dict):
+
+    def completion(self, model: str, configuration: dict, faiss_information: dict = None):
         """Generate a completion from the AI.
 
         Args:
@@ -55,9 +109,33 @@ class OllamaAIProvider(BaseAIProvider):
         """
 
         # Let the caller do errors.
+        messages = deepcopy(configuration.pop("messages", self.conversation))
+
+        if faiss_information is not None:
+
+            docs = faiss_information.get("data", ["a"])
+
+            # do faiss stuffs
+            if getattr(self, "index", None) is None:
+                self.index = create_index(docs, # pylint: disable=attribute-defined-outside-init
+                                          faiss_information.get("faiss_type", "IndexFlatL2"))
+
+            self.index.add(np.vstack([embed_text(d) for d in docs])) # pylint: disable=no-value-for-parameter
+
+            # search...
+
+            query = faiss_information.get("query", "a")
+            k = faiss_information.get("k", 5)
+
+            faiss_information["results"] = retrieve(docs, query, self.index, k)
+
+            # insert right before the last index... but conveniently never saving it to the real conversation!
+            messages.insert(-1, faiss_information)
+
+
         passed_model_config = {
             "model": configuration.pop("model", model or self.model),
-            "messages": configuration.pop("messages", self.conversation),
+            "messages": messages,
             "stream": configuration.pop("stream", True),
             "think": configuration.pop("think", self.think),
             "options": configuration.pop("options", {
@@ -131,10 +209,22 @@ class OllamaAIProvider(BaseAIProvider):
 
         do_streaming = data.pop("stream", False)
         tools = data.pop("tools", []) # Tools that are currently available to the AI.
-        # TODO. Here's how this is going to work.
-        # We're going to add a thing into the tools __init__.py that basically acts as exporting.
-        # The files will declare a list or tuple with their tool functions, __init__.py will combine them,
-        # and then we discard any not within the tools we just .pop()'d.
+
+
+        # TODO: This must be added to the Groq provider...
+        # "faiss_data": {
+        #     "data": [],
+        #     "index": 0,
+        #     "k": 1,
+        #     "type": "flatl2"
+        # }
+
+
+        faiss_data = data.pop("faiss_data", None)
+
+        if not faiss_is_available:
+            faiss_data = None
+
 
         tools_provided = {}
         for tool in self.tools_module.exports:
@@ -157,14 +247,15 @@ class OllamaAIProvider(BaseAIProvider):
         self.logger.info("Generating response...")
         #self.logger.debug(f"\nParameters:\n{data}\n")
 
-        while _count < 25:
+        while _count < 5:
             self.logger.debug(f"Attempt {_count}.")
 
             try:
                 #if do_streaming:
                 #print(f"{FM.debug} ", end="", flush=True, reset_color=False)
                 #print("here")
-                completion: ollama.ChatResponse = self.completion("", data)
+                completion: ollama.ChatResponse = self.completion("", data,
+                                                                  faiss_information=faiss_data)
                 #print("there")
 
                 if not completion:
